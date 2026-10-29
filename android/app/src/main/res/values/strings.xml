@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AutoFare</string>
+    <string name="service_description">يخلّي AutoFare يشوف طلبات الرحلات لما توصل، عشان يقبلها بدالك. ما بنقرأ ولا بنخزّن أي إشي خارج تطبيقات الرحلات.</string>
+</resources>

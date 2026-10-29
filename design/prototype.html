@@ -1,0 +1,1385 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AutoFare — نموذج التصميم</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,700;1,800;1,900&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════ TOKENS ═══════════════ */
+:root{
+  --paper:#F4F2ED;
+  --raised:#FFFFFF;
+  --sunk:#EDEAE3;
+  --ink:#121417;
+  --ink-2:#3A3F45;
+  --muted:#71767C;
+  --rule:#DFDBD2;
+  --rule-2:#C9C4B8;
+  --accept:#0F6B43;
+  --accept-bg:#E3EFE8;
+  --reject:#A83420;
+  --reject-bg:#F6E8E5;
+  --flag:#8A6412;
+  --flag-bg:#F4EDDC;
+  --logo-invert:0;
+  --grain:.035;
+  --lift:0 1px 2px rgba(18,20,23,.06), 0 8px 24px -18px rgba(18,20,23,.3);
+  --slant:-12deg;
+
+  /* Material 3 shape scale — MaterialTheme.shapes, matched to the Kotlin so a
+     radius here is the same token the app asks for. */
+  --sh-xs:4px;
+  --sh-sm:8px;
+  --sh-md:12px;
+  --sh-lg:16px;
+  --sh-xl:28px;
+}
+html[data-theme="dark"]{
+  --paper:#121315;
+  --raised:#191B1E;
+  --sunk:#0D0E10;
+  --ink:#F2F1EC;
+  --ink-2:#C6C8CB;
+  --muted:#898E94;
+  --rule:#272A2E;
+  --rule-2:#3A3E43;
+  --accept:#4FCB8C;
+  --accept-bg:#132420;
+  --reject:#F07A66;
+  --reject-bg:#251715;
+  --flag:#D7A64C;
+  --flag-bg:#241E12;
+  --logo-invert:1;
+  --grain:0;
+  --lift:0 1px 0 rgba(255,255,255,.03);
+}
+
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{
+  font-family:'IBM Plex Sans Arabic',sans-serif;
+  background:#D7D3CA;color:var(--ink);
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;
+  padding:26px 16px 60px;gap:18px;
+}
+html[data-theme="dark"] body{background:#08090A}
+
+.n{font-family:'Archivo',sans-serif;font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+.lat{font-family:'Archivo',sans-serif;direction:ltr;display:inline-block}
+
+/* ═══════════════ PAGE CHROME ═══════════════ */
+.chrome{display:flex;align-items:center;gap:16px;flex-wrap:wrap;justify-content:center}
+.chrome img{height:20px;filter:invert(var(--logo-invert));opacity:.7}
+.tsw{display:flex;gap:2px;background:rgba(0,0,0,.07);border-radius:999px;padding:3px}
+html[data-theme="dark"] .tsw{background:rgba(255,255,255,.08)}
+.tsw button{font-family:inherit;font-size:11.5px;font-weight:600;border:0;cursor:pointer;padding:7px 14px;border-radius:999px;background:transparent;color:var(--muted)}
+.tsw button[aria-pressed="true"]{background:var(--raised);color:var(--ink)}
+
+.picker{display:flex;gap:5px;flex-wrap:wrap;justify-content:center;max-width:660px}
+.picker button{font-family:inherit;font-size:12px;font-weight:600;background:transparent;color:var(--muted);border:1px solid var(--rule-2);border-radius:999px;padding:7px 14px;cursor:pointer}
+.picker button[aria-selected="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+
+/* ═══════════════ PHONE ═══════════════ */
+.phone{
+  width:390px;height:844px;flex:none;position:relative;overflow:hidden;
+  background:var(--paper);border-radius:44px;
+  box-shadow:0 0 0 10px #17191B, 0 34px 80px -34px rgba(0,0,0,.6);
+  display:flex;flex-direction:column;
+}
+/* paper grain */
+.phone::after{
+  content:'';position:absolute;inset:0;pointer-events:none;z-index:60;opacity:var(--grain);
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.notch{position:absolute;top:11px;left:50%;transform:translateX(-50%);width:104px;height:26px;background:#17191B;border-radius:999px;z-index:45}
+.sbar{flex:none;height:50px;display:flex;align-items:center;justify-content:space-between;padding:0 25px;font-family:'Archivo';font-size:12.5px;font-weight:600;color:var(--ink);direction:ltr;z-index:46}
+.sbar .r{display:flex;gap:5px;align-items:center}
+.bar{width:3px;background:currentColor;border-radius:1px}
+
+.vp{flex:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;position:relative}
+.vp::-webkit-scrollbar{display:none}
+.screen{display:none;padding:0 0 104px}
+.screen.active{display:block;animation:rise .26s cubic-bezier(.2,.7,.3,1)}
+@keyframes rise{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+.pad{padding:0 20px}
+
+/* ═══════════════ BRAND SYSTEM ═══════════════ */
+.slant{transform:skewX(var(--slant))}
+.unslant{display:inline-block;transform:skewX(calc(-1 * var(--slant)))}
+
+.speed{display:flex;flex-direction:column;gap:3px;align-items:flex-start;flex:none}
+.speed i{height:2.5px;background:currentColor;border-radius:2px;transform:skewX(var(--slant))}
+.speed i:nth-child(1){width:20px}
+.speed i:nth-child(2){width:13px;opacity:.5}
+.speed i:nth-child(3){width:7px;opacity:.26}
+
+.topline{display:flex;align-items:center;justify-content:space-between;padding:10px 20px 18px}
+.topline .bm{display:flex;align-items:center;gap:7px}
+.topline .bm img.mk{height:25px;filter:invert(var(--logo-invert))}
+.topline .bm img.wd{height:13px;filter:invert(var(--logo-invert));opacity:.9}
+.topline .dt{font-size:11.5px;color:var(--muted)}
+
+/* numbered section rule — the Swiss timetable move */
+.sec{display:flex;align-items:center;gap:11px;padding:0 20px;margin:30px 0 13px}
+.sec .ix{font-family:'Archivo';font-size:10.5px;font-weight:800;color:var(--muted);letter-spacing:.04em}
+/* Arabic label — tracking dropped to zero, same as SectionLabel in Type.kt */
+.sec .lb{font-size:11px;font-weight:700;letter-spacing:0;color:var(--muted)}
+.sec::after{content:'';flex:1;height:1px;background:var(--rule)}
+
+/* No tracking on Arabic anywhere — it is cursive, and letter-spacing (negative
+   OR positive) pulls the joins apart. Mirrors the rule in ui/theme/Type.kt.
+   Arabic also needs more leading than Latin: marks sit above, descenders below. */
+.ttl{font-size:26px;font-weight:700;letter-spacing:0;line-height:1.38}
+.dek{font-size:12.5px;color:var(--muted);line-height:1.75;margin-top:4px}
+
+/* hairline list — replaces card soup */
+.list{border-top:1px solid var(--rule)}
+.li{display:flex;align-items:center;gap:12px;padding:15px 20px;border-bottom:1px solid var(--rule)}
+.li .gro{flex:1;min-width:0}
+
+/* OutlinedCard, shapes.large. M3 outlined cards sit flat — no drop shadow. */
+.panel{margin:0 20px;background:var(--raised);border:1px solid var(--rule);border-radius:var(--sh-lg);padding:17px}
+.panel + .panel{margin-top:9px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+
+/* ── M3 Switch ──
+   52×32 track with a 2px outline when off, and a thumb that grows 16→24 as it
+   travels. That growth is the Material switch's tell; the old hand-drawn one was
+   47×27 with a fixed 21px knob. */
+.sw{
+  width:52px;height:32px;border-radius:999px;position:relative;flex:none;cursor:pointer;
+  background:var(--sunk);border:2px solid var(--rule-2);
+  transition:background .2s cubic-bezier(.2,0,0,1), border-color .2s;
+}
+.sw::after{
+  content:'';position:absolute;top:50%;right:8px;width:16px;height:16px;border-radius:50%;
+  background:var(--muted);transform:translateY(-50%);
+  transition:transform .25s cubic-bezier(.2,0,0,1), width .25s cubic-bezier(.2,0,0,1),
+             height .25s cubic-bezier(.2,0,0,1), right .25s cubic-bezier(.2,0,0,1),
+             background .2s;
+}
+.sw.on{background:var(--accept);border-color:var(--accept)}
+.sw.on::after{width:24px;height:24px;right:4px;background:#fff;transform:translateY(-50%) translateX(-20px)}
+html[data-theme="dark"] .sw.on::after{background:#0C1A14}
+
+/* M3 Button / OutlinedButton at shapes.medium, 18dp vertical content padding */
+.btn{width:100%;border:1px solid var(--ink);border-radius:var(--sh-md);padding:18px 12px;cursor:pointer;
+     font-family:inherit;font-size:15.5px;font-weight:700;background:var(--ink);color:var(--paper);
+     text-align:center;transition:opacity .15s}
+.btn:active{opacity:.85}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--rule-2)}
+.btn.lg{font-size:15.5px}
+
+/* ═══════════════ SHIFT BLOCK (home hero) ═══════════════ */
+.shift{margin:0 20px;position:relative}
+/* StatusBand — a Surface at shapes.extraSmall */
+.band{
+  display:inline-flex;align-items:center;gap:8px;padding:7px 14px;border-radius:var(--sh-xs);
+  background:var(--accept);color:#fff;font-size:11.5px;font-weight:700;
+}
+html[data-theme="dark"] .band{color:#0C1A14}
+.band.off{background:var(--flag)}
+.band .pip{width:6px;height:6px;border-radius:50%;background:currentColor}
+
+.figure{display:flex;align-items:baseline;gap:10px;direction:ltr;justify-content:flex-end;margin:18px 0 0}
+.figure b{font-family:'Archivo';font-weight:900;font-size:68px;line-height:.86;letter-spacing:-.05em;font-variant-numeric:tabular-nums}
+.figure i{font-style:normal;font-family:'Archivo';font-size:16px;font-weight:700;color:var(--muted)}
+.figcap{font-size:12px;color:var(--muted);margin-top:9px;display:flex;justify-content:space-between}
+
+.sparkline{display:flex;align-items:flex-end;gap:3px;height:44px;margin-top:20px;direction:ltr}
+.sparkline i{flex:1;background:var(--rule-2);border-radius:2px 2px 0 0;transform:skewX(var(--slant))}
+.sparkline i.hi{background:var(--ink)}
+
+.trio{display:flex;margin-top:20px;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+.trio div{flex:1;padding:13px 4px;text-align:center}
+.trio div + div{border-right:1px solid var(--rule)}
+.trio b{display:block;font-family:'Archivo';font-size:21px;font-weight:800;letter-spacing:-.025em;font-variant-numeric:tabular-nums}
+.trio span{font-size:10.5px;color:var(--muted);margin-top:2px;display:block}
+
+/* ═══════════════ SCORE DIAL ═══════════════ */
+.score{display:flex;align-items:center;gap:18px;margin:0 20px;padding:18px;background:var(--raised);border:1px solid var(--rule);border-radius:var(--sh-lg)}
+.dial{width:78px;height:78px;flex:none;position:relative;display:grid;place-items:center}
+.dial svg{position:absolute;inset:0;transform:rotate(-90deg)}
+.dial b{font-family:'Archivo';font-size:25px;font-weight:900;letter-spacing:-.03em}
+.score .meta{flex:1}
+.score .meta h4{font-size:14.5px;font-weight:700}
+.score .meta p{font-size:11.5px;color:var(--muted);line-height:1.6;margin-top:4px}
+
+/* ═══════════════ APP ROWS ═══════════════ */
+.app{display:flex;align-items:center;gap:12px;padding:15px 20px;border-bottom:1px solid var(--rule)}
+.app:first-child{border-top:1px solid var(--rule)}
+.sq{width:37px;height:37px;border-radius:var(--sh-sm);flex:none;display:grid;place-items:center;font-family:'Archivo';font-weight:800;font-size:15px;color:#fff}
+.sq.j{background:#5B3FE8}.sq.p{background:#0E76CC}
+.app .gro b{display:block;font-family:'Archivo';font-size:14px;font-weight:700;direction:ltr;text-align:right}
+.app .gro span{font-size:11.5px;color:var(--muted)}
+
+/* ═══════════════ DECISIONS ═══════════════ */
+.dec{display:flex;gap:12px;padding:14px 20px;border-bottom:1px solid var(--rule)}
+.vd{width:4px;border-radius:3px;flex:none;transform:skewX(var(--slant))}
+.vd.y{background:var(--accept)}.vd.n{background:var(--rule-2)}
+.dec .gro b{font-size:13px;font-weight:700}
+.dec .gro p{font-size:11.5px;color:var(--muted);margin-top:3px;line-height:1.55}
+.dec .pr{font-family:'Archivo';font-size:15px;font-weight:800;flex:none;direction:ltr;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.dec .pr.dim{color:var(--rule-2)}
+
+/* ═══════════════ INTERCEPT (the signature moment) ═══════════════ */
+#intercept{padding:0;height:100%;position:relative;overflow:hidden}
+.mapbg{position:absolute;inset:0;background:var(--sunk)}
+.mapbg .grid{position:absolute;inset:-20%;opacity:.5;
+  background-image:
+   repeating-linear-gradient(68deg, transparent 0 46px, var(--rule) 46px 47px),
+   repeating-linear-gradient(-22deg, transparent 0 62px, var(--rule) 62px 63px);
+}
+.mapbg .blk{position:absolute;background:var(--rule);opacity:.5;border-radius:3px}
+.mapbg .road{position:absolute;height:9px;background:var(--rule-2);opacity:.75;border-radius:5px}
+.mapbg::after{content:'';position:absolute;inset:0;background:var(--paper);opacity:.32}
+
+.icept{position:absolute;left:16px;right:16px;top:118px;z-index:5}
+.ihead{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px}
+.ihead img{height:13px;filter:invert(var(--logo-invert))}
+.ihead .ms{font-family:'Archivo';font-size:11px;font-weight:700;color:var(--muted)}
+
+.icard{background:var(--raised);border:1px solid var(--rule);border-radius:22px;overflow:hidden;box-shadow:0 26px 56px -24px rgba(0,0,0,.45)}
+.icard .top{padding:20px 20px 16px}
+.offerrow{display:flex;align-items:baseline;justify-content:flex-end;gap:9px;direction:ltr}
+.offerrow b{font-family:'Archivo';font-size:50px;font-weight:900;letter-spacing:-.045em;line-height:.9}
+.offerrow i{font-style:normal;font-family:'Archivo';font-size:14px;font-weight:700;color:var(--muted)}
+.trip{font-size:12.5px;color:var(--muted);margin-top:10px;line-height:1.6}
+
+.math{margin:16px 0 0;border-top:1px solid var(--rule);padding-top:14px}
+.mrow{display:flex;align-items:center;justify-content:space-between;padding:6px 0;font-size:12.5px;color:var(--ink-2)}
+.mrow .v{font-family:'Archivo';font-weight:700;direction:ltr;font-variant-numeric:tabular-nums}
+.mrow.key{color:var(--ink);font-weight:700}
+.mrow.key .v{font-size:17px;letter-spacing:-.02em}
+
+.stamp{
+  display:flex;align-items:center;justify-content:center;gap:11px;
+  background:var(--accept);color:#fff;padding:17px;
+}
+html[data-theme="dark"] .stamp{color:#0B1A14}
+.stamp.no{background:var(--reject-bg);color:var(--reject)}
+.stamp .word{font-size:20px;font-weight:700;letter-spacing:-.01em}
+.stamp .ms{font-family:'Archivo';font-size:12px;font-weight:700;opacity:.8}
+
+.dismiss{height:3px;background:var(--rule-2);border-radius:2px;margin:13px 34px 0;overflow:hidden}
+.dismiss i{display:block;height:100%;width:62%;background:var(--ink);border-radius:2px}
+.iwhy{margin-top:11px;text-align:center;font-size:11.5px;color:var(--muted);line-height:1.8}
+
+/* ═══════════════ SEGMENTED ═══════════════ */
+/* SingleChoiceSegmentedButtonRow: buttons are joined and share a 1px outline,
+   the row's outer ends round to 20px while the inner join stays square —
+   SegmentedButtonDefaults.itemShape(index, count). Long Arabic labels still wrap
+   to a second row, so each visual row is its own M3 row, as in Segmented(). */
+.seg{display:grid;gap:6px;margin:0 20px}
+.seg.two{grid-template-columns:1fr 1fr}
+.seg.four{grid-template-columns:1fr 1fr}
+.seg button{
+  font-family:inherit;font-size:12.5px;font-weight:500;padding:12px 6px;cursor:pointer;
+  background:var(--sunk);color:var(--muted);border:1px solid var(--rule);
+  display:flex;align-items:center;justify-content:center;text-align:center;min-height:48px;
+}
+/* RTL: the odd cell of each pair is the right-hand end of its row */
+.seg button:nth-child(odd){border-radius:0 20px 20px 0;border-left:0}
+.seg button:nth-child(even){border-radius:20px 0 0 20px}
+.seg button[aria-selected="true"]{background:var(--raised);color:var(--ink);font-weight:700;border-color:var(--rule-2)}
+
+/* ═══════════════ STEPPER ═══════════════ */
+.stp{margin-top:15px}
+.stp > label{display:block;font-size:12px;color:var(--muted);margin-bottom:8px}
+.stpc{display:flex;align-items:center;gap:7px}
+/* FilledIconButton at shapes.medium — filled surface, no outline */
+.stpc button{width:44px;height:50px;flex:none;border-radius:var(--sh-md);border:0;background:var(--raised);color:var(--ink);font-family:'Archivo';font-size:19px;font-weight:600;cursor:pointer;line-height:1}
+.stpv{flex:1;height:50px;border-radius:var(--sh-md);border:1px solid var(--ink);background:var(--raised);display:flex;align-items:center;justify-content:center;gap:7px;direction:ltr}
+.stpv b{font-family:'Archivo';font-size:22px;font-weight:800;letter-spacing:-.025em;font-variant-numeric:tabular-nums}
+.stpv span{font-size:11.5px;color:var(--muted);font-weight:600}
+
+.hint{font-size:11.5px;color:var(--muted);line-height:1.7;margin-top:12px}
+
+/* simulator inside rules */
+.sim{margin-top:16px;border-top:1px solid var(--rule);padding-top:15px}
+.sim h4{font-size:10.5px;font-weight:700;letter-spacing:.13em;color:var(--muted);margin-bottom:12px}
+.simrow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;font-size:12.5px;border-bottom:1px solid var(--rule)}
+.simrow:last-child{border-bottom:0}
+.simrow .v{font-family:'Archivo';font-weight:700;direction:ltr;font-variant-numeric:tabular-nums}
+.vt{font-size:10.5px;font-weight:700;padding:4px 9px;border-radius:5px}
+.vt.y{background:var(--accept-bg);color:var(--accept)}
+.vt.n{background:var(--reject-bg);color:var(--reject)}
+
+/* ── M3 ListItem ──
+   Used for the toggle rows, the permission rows and the watched-app rows. The
+   list item centres its leading/trailing slots against the text block and keeps
+   a taller minimum height than the old hand-built row. */
+.tl{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 0;min-height:72px;border-bottom:1px solid var(--rule)}
+.tl:last-of-type{border-bottom:0}
+.tl .gro b{display:block;font-size:13.5px;font-weight:700}
+.tl .gro p{font-size:11.5px;color:var(--muted);margin-top:4px;line-height:1.65}
+
+/* ═══════════════ STATS ═══════════════ */
+.kpi{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+.kpi div{padding:17px 20px}
+.kpi div:nth-child(odd){border-left:1px solid var(--rule)}
+.kpi div:nth-child(-n+2){border-bottom:1px solid var(--rule)}
+.kpi b{display:block;font-family:'Archivo';font-size:30px;font-weight:900;letter-spacing:-.04em;font-variant-numeric:tabular-nums;line-height:1}
+.kpi span{font-size:11.5px;color:var(--muted);display:block;margin-top:7px}
+.kpi em{font-style:normal;font-size:11px;font-weight:700;color:var(--accept);display:block;margin-top:5px}
+.kpi em.flat{color:var(--muted);font-weight:500}
+
+.chart{display:flex;align-items:flex-end;gap:5px;height:140px;direction:ltr;padding:0 20px}
+.chart .c{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:8px;height:100%}
+.chart .c i{width:100%;background:var(--rule-2);border-radius:3px 3px 0 0;transform:skewX(var(--slant))}
+.chart .c.pk i{background:var(--ink)}
+.chart .c span{font-family:'Archivo';font-size:9.5px;font-weight:700;color:var(--muted)}
+
+.advice{display:flex;gap:12px;align-items:flex-start;margin:18px 20px 0;padding:16px;background:var(--raised);border:1px solid var(--rule);border-radius:var(--sh-lg)}
+.advice .speed{margin-top:4px;color:var(--ink)}
+.advice p{font-size:12.5px;line-height:1.8;color:var(--ink-2)}
+.advice p b{color:var(--ink)}
+
+.split{padding:0 20px}
+.splitrow{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid var(--rule)}
+.splitrow:last-child{border-bottom:0}
+.splitrow .nm{flex:none;width:76px;font-family:'Archivo';font-size:12.5px;font-weight:700;direction:ltr;text-align:right}
+.splitrow .track{flex:1;height:8px;background:var(--sunk);border-radius:999px;overflow:hidden;direction:ltr}
+.splitrow .track i{display:block;height:100%;border-radius:999px}
+.splitrow .amt{flex:none;font-family:'Archivo';font-size:13px;font-weight:700;direction:ltr;font-variant-numeric:tabular-nums}
+
+/* ═══════════════ ONBOARDING ═══════════════ */
+#onboard{padding:0}
+.obwrap{padding:14px 26px 0}
+.obsteps{display:flex;gap:6px;margin-bottom:34px}
+.obsteps i{height:3px;flex:1;background:var(--rule-2);border-radius:2px;transform:skewX(var(--slant))}
+.obsteps i.done{background:var(--ink)}
+/* forced LTR: in an RTL layout "01 / 03" otherwise renders as "03 / 01" */
+.obnum{font-family:'Archivo';font-size:13px;font-weight:900;color:var(--muted);letter-spacing:.06em;direction:ltr}
+.obh{font-size:33px;font-weight:700;letter-spacing:-.025em;line-height:1.2;margin-top:12px}
+.obp{font-size:13.5px;color:var(--muted);line-height:1.85;margin-top:14px}
+.obvis{margin:34px 0;display:flex;justify-content:center}
+.obvis .ring{width:150px;height:150px;border-radius:50%;border:1.5px dashed var(--rule-2);display:grid;place-items:center;position:relative}
+.obvis .ring img{width:66px;filter:invert(var(--logo-invert))}
+.obvis .ring .orb{position:absolute;width:11px;height:11px;border-radius:50%;background:var(--accept);top:-5px;left:50%}
+.obfoot{position:absolute;left:26px;right:26px;bottom:34px}
+
+/* ═══════════════ PERMISSIONS / SETTINGS ═══════════════ */
+.perm{display:flex;align-items:center;gap:16px;padding:12px 20px;min-height:72px;border-bottom:1px solid var(--rule)}
+.perm:first-of-type{border-top:1px solid var(--rule)}
+/* StatusTick — a Surface at shapes.small */
+.perm .ic{width:30px;height:30px;border-radius:var(--sh-sm);flex:none;display:grid;place-items:center;font-size:13px;font-weight:800}
+.perm.ok .ic{background:var(--accept-bg);color:var(--accept)}
+.perm.todo .ic{background:var(--flag-bg);color:var(--flag)}
+.perm .gro b{display:block;font-size:13.5px;font-weight:700}
+.perm .gro span{font-size:11.5px;color:var(--muted)}
+.perm .st{font-size:11.5px;font-weight:700;flex:none}
+.perm.ok .st{color:var(--accept)}.perm.todo .st{color:var(--flag)}
+
+.subs{margin:0 20px;border:1.5px solid var(--ink);border-radius:var(--sh-xl);padding:19px;background:var(--raised)}
+.subs .days{font-family:'Archivo';font-size:44px;font-weight:900;letter-spacing:-.045em;direction:ltr;text-align:right;margin:6px 0;font-variant-numeric:tabular-nums;line-height:1}
+.key{display:flex;align-items:center;justify-content:space-between;margin-top:15px;background:var(--sunk);border-radius:var(--sh-sm);padding:12px 14px}
+.key code{font-family:'Archivo';font-size:13px;font-weight:700;letter-spacing:.07em;direction:ltr}
+.key button{background:none;border:0;color:var(--ink);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;text-decoration:underline}
+
+/* profiles */
+.prof{display:flex;align-items:center;gap:13px;padding:15px 20px;border-bottom:1px solid var(--rule)}
+.prof:first-of-type{border-top:1px solid var(--rule)}
+.prof.live{background:var(--raised)}
+.prof .tm{font-family:'Archivo';font-size:11.5px;font-weight:700;color:var(--muted);flex:none;direction:ltr;text-align:left;line-height:1.55}
+.prof .gro b{display:block;font-size:13.5px;font-weight:700}
+.prof .gro span{font-size:11.5px;color:var(--muted)}
+.prof .now{font-size:10px;font-weight:700;color:var(--paper);background:var(--ink);padding:4px 9px;border-radius:5px;flex:none;transform:skewX(var(--slant))}
+.prof .now span{display:inline-block;transform:skewX(calc(-1 * var(--slant)))}
+
+.goal{height:7px;border-radius:999px;background:var(--sunk);overflow:hidden;margin-top:14px;direction:ltr}
+.goal i{display:block;height:100%;background:var(--ink)}
+.tags{display:flex;gap:7px;flex-wrap:wrap;margin-top:13px}
+.tags span{font-size:12px;font-weight:600;border:1px solid var(--rule-2);padding:7px 12px;border-radius:999px}
+.tags span.add{border-style:dashed;color:var(--muted)}
+
+/* ═══════════════ M3 NAVIGATION BAR ═══════════════
+   80dp tall, and the selected destination gets a 64×32 pill behind its icon —
+   that indicator is the whole visual difference from the old hand-rolled row. */
+.tabs{flex:none;display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--rule);background:var(--paper);padding:12px 6px 24px;z-index:46}
+.tabs button{background:none;border:0;cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--muted);font-size:10.5px;font-weight:500;padding:0}
+.tabs button .ind{
+  width:64px;height:32px;border-radius:999px;display:grid;place-items:center;
+  background:transparent;transition:background .2s cubic-bezier(.2,0,0,1);
+}
+.tabs button svg{width:21px;height:21px;stroke-width:1.75;fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round}
+.tabs button[aria-selected="true"]{color:var(--ink);font-weight:700}
+.tabs button[aria-selected="true"] .ind{background:var(--sunk)}
+
+/* ═══════════════ BUBBLE ═══════════════ */
+.bwrap{position:absolute;inset:0;z-index:50;display:none}
+.bwrap.show{display:block}
+.fab{position:absolute;bottom:126px;left:18px;width:56px;height:56px;border-radius:50%;background:var(--raised);border:1.5px solid var(--ink);display:grid;place-items:center;cursor:pointer;box-shadow:0 10px 26px rgba(0,0,0,.26)}
+.fab img{width:29px;filter:invert(var(--logo-invert))}
+.psheet{position:absolute;left:14px;right:14px;bottom:196px;border-radius:20px;background:var(--raised);border:1px solid var(--rule-2);padding:17px;box-shadow:0 20px 48px rgba(0,0,0,.3)}
+
+/* splash — mark chases the speed lines, wordmark settles under it */
+#splash{display:none;height:100%;flex-direction:column;align-items:center;justify-content:center;padding:0 40px}
+#splash.active{display:flex}
+.phone:has(#splash.active) .tabs,.phone:has(#onboard.active) .tabs,.phone:has(#intercept.active) .tabs{display:none}
+.splashmark{position:relative;height:132px;width:100%;display:grid;place-items:center}
+.splashmark .streak{position:absolute;inset:0 24px;display:flex;flex-direction:column;justify-content:center;gap:11px;align-items:flex-start}
+.splashmark .streak i{height:5px;background:var(--ink);border-radius:1px;transform:skewX(var(--slant))}
+.splashmark .streak i:nth-child(1){width:46%;opacity:.9}
+.splashmark .streak i:nth-child(2){width:30%;opacity:.5}
+.splashmark .streak i:nth-child(3){width:17%;opacity:.26}
+#splash img.mk{height:84px;position:relative;filter:invert(var(--logo-invert))}
+#splash img.wd{height:30px;margin-top:22px;filter:invert(var(--logo-invert))}
+#splash p{margin-top:26px;font-size:13.5px;color:var(--muted);text-align:center;line-height:1.85}
+
+/* back link in the pushed screens (settings, learn) */
+.backlink{background:none;border:0;font-family:inherit;font-size:12.5px;font-weight:700;color:var(--ink);cursor:pointer;padding:8px}
+
+/* onboarding skip */
+.obskip{text-align:center;font-size:12.5px;font-weight:700;color:var(--muted);padding:14px 0;cursor:pointer;min-height:19px}
+.obskip.hide{visibility:hidden;cursor:default}
+
+/* ═══════════════ LEARN MODE ═══════════════ */
+/* The loud box — only for the two mistakes that silently waste a whole shift. */
+.warn{display:flex;gap:11px;align-items:flex-start;margin:14px 20px 0;padding:15px;
+      background:var(--flag-bg);border:1px solid var(--flag);border-radius:var(--sh-md)}
+.warn b{font-family:'Archivo';font-size:15px;font-weight:800;color:var(--flag);flex:none;line-height:1.2}
+.warn p{font-size:12px;color:var(--ink);line-height:1.75}
+
+.countbox{margin:10px 20px 0;background:var(--raised);border:1px solid var(--rule);border-radius:var(--sh-lg);
+          padding:18px;text-align:center;cursor:pointer}
+.countbox .big{font-family:'Archivo';font-size:44px;font-weight:900;letter-spacing:-.045em;line-height:1;font-variant-numeric:tabular-nums}
+.countbox .cap{font-size:12.5px;color:var(--muted);margin-top:6px}
+.countbox .keep{font-size:12.5px;font-weight:700;color:var(--accept);margin-top:10px}
+.countbox .brk{border-top:1px solid var(--rule);margin-top:14px}
+.countbox .brkrow{display:flex;align-items:center;justify-content:space-between;padding-top:11px;font-size:12px}
+.countbox .brkrow b{font-weight:700;color:var(--ink)}
+.countbox .brkrow span{color:var(--muted);font-family:'Archivo';font-variant-numeric:tabular-nums}
+.countbox .tap{font-size:11.5px;color:var(--muted);margin-top:12px}
+
+/* The service row and the app list are both fenced top and bottom, matching the
+   Rule() calls around them. :first-of-type is no use here — it matches on element
+   type, and every row on the screen is a div. */
+#svcRow{border-top:1px solid var(--rule)}
+
+/* watched-apps list — same row as .perm but with the package name underneath */
+.pkg{display:flex;align-items:center;gap:12px;padding:13px 20px;border-bottom:1px solid var(--rule)}
+.pkg.top{border-top:1px solid var(--rule)}
+.pkg .sq{width:34px;height:34px;border-radius:var(--sh-sm);font-size:14px}
+.pkg .gro b{display:block;font-size:13.5px;font-weight:700}
+.pkg .gro code{font-family:'Archivo';font-size:10.5px;color:var(--muted);direction:ltr;display:block}
+.pkg .st{font-size:11px;font-weight:700;flex:none}
+.pkg .st.sure{color:var(--accept)}
+.pkg .st.guess{color:var(--flag)}
+.sq.ok{background:var(--accept-bg);color:var(--accept)}
+.sq.c{background:#0B8A3E}.sq.u{background:#111111}
+
+/* a note that a screen is design-only and not in the build yet */
+.unbuilt{margin:0 20px;padding:11px 13px;border:1px dashed var(--rule-2);border-radius:12px;
+         font-size:11.5px;color:var(--muted);line-height:1.7}
+
+.foot{max-width:640px;text-align:center;font-size:12px;color:#6B6F74;line-height:1.85}
+html[data-theme="dark"] .foot{color:#7B8086}
+
+@media(max-width:460px){
+  .phone{width:100%;height:740px;border-radius:30px;box-shadow:0 0 0 6px #17191B}
+  body{padding:16px 10px 40px}
+}
+
+/* ?bare=1 — strips the review chrome so the phone can be embedded elsewhere
+   (used by the launch video, which renders these real screens live). */
+body.bare{padding:0;gap:0;background:transparent;min-height:0}
+body.bare .chrome,body.bare .picker,body.bare .foot{display:none}
+body.bare .screen.active{animation:none}
+/* ?flat=1 — drop the bezel too, so an embedder can supply its own device frame */
+/* !important beats the max-width:460px mobile rule, which would otherwise
+   resize the phone when embedded in a narrow iframe */
+body.flat .phone{box-shadow:none;border-radius:0;border:0;width:390px!important;height:844px!important}
+body.flat .notch{display:none}
+</style>
+</head>
+<body>
+
+<div class="chrome">
+  <img src="assets/logo-word.png" alt="AutoFare">
+  <div class="tsw">
+    <button data-theme-set="light" aria-pressed="true">فاتح</button>
+    <button data-theme-set="dark" aria-pressed="false">غامق</button>
+  </div>
+</div>
+
+<div class="picker" role="tablist">
+  <button role="tab" aria-selected="true" data-go="home">الرئيسية</button>
+  <button role="tab" aria-selected="false" data-go="rules">قواعد القبول</button>
+  <button role="tab" aria-selected="false" data-go="smart">الأوضاع الذكية</button>
+  <button role="tab" aria-selected="false" data-go="stats">الإحصائيات</button>
+  <button role="tab" aria-selected="false" data-go="settings">الإعدادات</button>
+  <button role="tab" aria-selected="false" data-go="learn">وضع التعلّم</button>
+  <button role="tab" aria-selected="false" data-go="onboard">التشغيل الأول</button>
+  <button role="tab" aria-selected="false" data-go="splash">البداية</button>
+  <button role="tab" aria-selected="false" data-go="intercept">لحظة القبول ★</button>
+  <button role="tab" aria-selected="false" data-bubble="1">الزر العائم ★</button>
+</div>
+
+<div class="phone">
+  <div class="notch"></div>
+  <div class="sbar">
+    <span>9:41</span>
+    <span class="r">
+      <span style="display:flex;gap:2px;align-items:flex-end;height:10px">
+        <i class="bar" style="height:4px"></i><i class="bar" style="height:6px"></i><i class="bar" style="height:8px"></i><i class="bar" style="height:10px"></i>
+      </span>
+      <svg width="15" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12.5a10 10 0 0 1 14 0M8.5 16a5.5 5.5 0 0 1 7 0M12 19.5h.01"/></svg>
+      <span style="width:21px;height:11px;border:1.4px solid currentColor;border-radius:3px;position:relative;display:inline-block">
+        <i style="position:absolute;inset:1.5px;width:64%;background:currentColor;border-radius:1px;display:block"></i>
+      </span>
+    </span>
+  </div>
+
+  <div class="vp">
+
+    <!-- ══════ SPLASH ══════ -->
+    <section class="screen" id="splash">
+      <div class="splashmark">
+        <div class="streak"><i></i><i></i><i></i></div>
+        <img class="mk" src="assets/logo-mark.png" alt="">
+      </div>
+      <img class="wd" src="assets/logo-word.png" alt="AutoFare">
+      <p>ما تلحق ع الطلبات.<br>خلّي AutoFare يلحق إلك.</p>
+    </section>
+
+    <!-- ══════ ONBOARDING ══════ -->
+    <section class="screen" id="onboard" style="height:100%;position:relative">
+      <div class="obwrap">
+        <div class="obsteps" id="obSteps"><i></i><i></i><i></i></div>
+        <div class="obnum" id="obNum">01 / 03</div>
+        <h2 class="obh" id="obHead"></h2>
+        <p class="obp" id="obBody"></p>
+        <div class="obvis">
+          <div class="ring"><span class="orb"></span><img src="assets/logo-mark.png" alt=""></div>
+        </div>
+      </div>
+      <div class="obfoot">
+        <button class="btn lg" id="obCta"></button>
+        <p id="obRe" style="text-align:center;font-size:11.5px;color:var(--muted);margin-top:14px;line-height:1.7"></p>
+        <div class="obskip" id="obSkip">تخطّى</div>
+      </div>
+    </section>
+
+    <!-- ══════ INTERCEPT — signature moment ══════ -->
+    <section class="screen" id="intercept">
+      <div class="mapbg">
+        <div class="grid"></div>
+        <div class="road" style="top:30%;left:-10%;width:130%;transform:rotate(-14deg)"></div>
+        <div class="road" style="top:62%;left:-10%;width:130%;transform:rotate(6deg)"></div>
+        <div class="blk" style="top:14%;left:10%;width:66px;height:52px"></div>
+        <div class="blk" style="top:44%;left:58%;width:84px;height:60px"></div>
+        <div class="blk" style="top:74%;left:16%;width:70px;height:72px"></div>
+      </div>
+
+      <div class="icept">
+        <div class="ihead">
+          <img src="assets/logo-word.png" alt="AutoFare">
+          <span class="ms">وصل الطلب · 0.4 ثانية</span>
+        </div>
+
+        <div class="icard">
+          <div class="top">
+            <div class="offerrow"><i>د.أ</i><b>5.20</b></div>
+            <p class="trip">تل الرمان ← الصويفية<br>الزبون على بعد <b class="lat">4</b> دقايق · الرحلة <b class="lat">14</b> دقيقة</p>
+
+            <div class="math">
+              <div class="mrow"><span>السعر ÷ وقت الوصول</span><span class="v">5.20 ÷ 4</span></div>
+              <div class="mrow key"><span>الربح بالدقيقة</span><span class="v">1.30</span></div>
+              <div class="mrow"><span>حدّك الأدنى</span><span class="v">0.60</span></div>
+            </div>
+          </div>
+          <div class="stamp">
+            <span class="word">قبلناه إلك</span>
+            <span class="ms">0.9 ثانية</span>
+          </div>
+        </div>
+
+        <div class="dismiss"><i></i></div>
+        <p class="iwhy">أعلى بـ <b>2.2 ضعف</b> من حدّك — ما كان في داعي تفكّر.<br><span style="opacity:.7">بتسكّر لحالها · اضغط لو بدك ترجع</span></p>
+
+        <!-- Nothing in the build draws over another app yet — no overlay window
+             is created anywhere in the source. This screen is still a design. -->
+        <div class="unbuilt" style="margin:22px 0 0">★ تصميم بس — لسا ما انبنت. v0.4 بيقبل الطلب فعلياً بس بدون هالشاشة اللي تطلع فوق تطبيق الرحلات.</div>
+      </div>
+    </section>
+
+    <!-- ══════ HOME ══════ -->
+    <section class="screen active" id="home">
+      <div class="topline">
+        <div class="bm">
+          <img class="mk" src="assets/logo-mark.png" alt="">
+          <img class="wd" src="assets/logo-word.png" alt="AutoFare">
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <span class="dt">الأحد · 25 تشرين</span>
+          <button class="backlink" style="font-size:11.5px;padding:6px 0" data-go="settings">الإعدادات</button>
+        </div>
+      </div>
+
+      <div class="shift">
+        <div class="row">
+          <span class="band slant" id="band"><span class="unslant" style="display:flex;align-items:center;gap:7px"><i class="pip"></i><span id="bandTxt">الدوام شغّال</span></span></span>
+          <span class="n" style="font-size:12.5px;color:var(--muted);font-weight:600">04:12</span>
+        </div>
+
+        <div class="figure"><i>د.أ</i><b id="money">47.50</b></div>
+        <div class="figcap"><span>أرباح اليوم</span><span>12 رحلة · 9 ساعات</span></div>
+
+        <div class="sparkline">
+          <i style="height:18%"></i><i style="height:32%"></i><i style="height:24%"></i><i style="height:48%"></i>
+          <i style="height:40%"></i><i style="height:64%"></i><i class="hi" style="height:96%"></i><i class="hi" style="height:72%"></i>
+          <i style="height:38%"></i><i style="height:54%"></i><i style="height:28%"></i><i style="height:44%"></i>
+        </div>
+
+        <div class="trio">
+          <div><b>11.4</b><span>د.أ بالساعة</span></div>
+          <div><b>0.9</b><span>ثانية للقبول</span></div>
+          <div><b>61%</b><span>نسبة القبول</span></div>
+        </div>
+
+        <button class="btn lg" id="power" style="margin-top:18px">وقّف الدوام</button>
+      </div>
+
+      <div class="sec"><span class="ix">01</span><span class="lb">تقييم اليوم</span></div>
+      <div class="score">
+        <div class="dial">
+          <svg viewBox="0 0 80 80">
+            <circle cx="40" cy="40" r="34" fill="none" stroke="var(--rule)" stroke-width="7"/>
+            <circle cx="40" cy="40" r="34" fill="none" stroke="var(--accept)" stroke-width="7"
+                    stroke-linecap="round" stroke-dasharray="213.6" stroke-dashoffset="47"/>
+          </svg>
+          <b>78</b>
+        </div>
+        <div class="meta">
+          <h4>يوم منيح</h4>
+          <p>ربحك بالساعة فوق متوسطك. بس ضيّعت 3 طلبات حلوة وإنت بوضع الراحة — جرّب تقصّر الاستراحة.</p>
+        </div>
+      </div>
+
+      <div class="sec"><span class="ix">02</span><span class="lb">التطبيقات</span></div>
+      <div class="app">
+        <div class="sq j">J</div>
+        <div class="gro"><b>Jeeny</b><span>من 3.00 د.أ وفوق · لحد 5 دقايق</span></div>
+        <div class="sw on" data-sw></div>
+      </div>
+      <div class="app">
+        <div class="sq p">P</div>
+        <div class="gro"><b>Petra Ride</b><span>ربح بالدقيقة 0.60 د.أ</span></div>
+        <div class="sw on" data-sw></div>
+      </div>
+
+      <div class="sec"><span class="ix">03</span><span class="lb">آخر القرارات</span></div>
+      <div class="dec">
+        <div class="vd y"></div>
+        <div class="gro"><b>قبلنا — جيني</b><p>تل الرمان ← الصويفية · 4 دقايق · 1.30 للدقيقة</p></div>
+        <div class="pr">5.20</div>
+      </div>
+      <div class="dec">
+        <div class="vd n"></div>
+        <div class="gro"><b>رفضنا — جيني</b><p>السعر تحت الحد · طلبت 3.00 وإجا 2.10</p></div>
+        <div class="pr dim">2.10</div>
+      </div>
+      <div class="dec">
+        <div class="vd y"></div>
+        <div class="gro"><b>قبلنا — بترا رايد</b><p>الجاردنز ← خلدا · دقيقة وحدة للزبون</p></div>
+        <div class="pr">4.00</div>
+      </div>
+      <div class="dec">
+        <div class="vd n"></div>
+        <div class="gro"><b>رفضنا — جيني</b><p>الزبون بعيد · 11 دقيقة وإنت حاطط 5</p></div>
+        <div class="pr dim">6.80</div>
+      </div>
+
+      <div class="advice" style="margin-top:20px">
+        <div class="speed"><i></i><i></i><i></i></div>
+        <p>من الصبح رفضنا <b>14 طلب</b> كانوا بيضيّعوا عليك وقت. ربحك بالساعة أعلى <b>18%</b> من أمس.</p>
+      </div>
+    </section>
+
+    <!-- ══════ RULES ══════ -->
+    <section class="screen" id="rules">
+      <div class="topline">
+        <div><h1 class="ttl">قواعد القبول</h1><p class="dek">إحنا منقرّر بدالك — إنت بس حدّد شو بدك.</p></div>
+        <div class="speed"><i></i><i></i><i></i></div>
+      </div>
+
+      <div class="seg two" id="appTabs">
+        <button aria-selected="true">Jeeny</button>
+        <button aria-selected="false">Petra Ride</button>
+      </div>
+
+      <div class="sec"><span class="ix">01</span><span class="lb">القبول التلقائي</span></div>
+      <div class="panel">
+        <div class="tl" style="border-bottom:0">
+          <div class="gro">
+            <b id="armTitle">اقبل الطلبات بدالي بـ Jeeny</b>
+            <p id="armDetail">مطفي. منراقب الطلبات وما منضغط ولا شي.</p>
+          </div>
+          <div class="sw" id="armSw"></div>
+        </div>
+        <p class="hint" id="armHint" style="display:none">لازم خدمة AutoFare تكون مفعّلة من إعدادات الوصولية، وإذا الهاتف طفّاها لحالها بعد تحديث التطبيق لازم ترجع تفعّلها.</p>
+      </div>
+
+      <div class="sec"><span class="ix">02</span><span class="lb">طريقة الحساب</span></div>
+      <div class="seg four" id="modeTabs">
+        <button aria-selected="false">كل الطلبات</button>
+        <button aria-selected="false">من سعر وفوق</button>
+        <button aria-selected="false">بين سعرين</button>
+        <button aria-selected="true">الربح بالدقيقة</button>
+      </div>
+
+      <div class="panel" style="margin-top:11px">
+        <div style="font-size:15px;font-weight:700" id="modeName">الربح بالدقيقة</div>
+        <p class="dek" style="margin-top:7px" id="modeWhy"></p>
+
+        <!-- Which steppers show depends on the mode — same switch as RulesScreen.kt -->
+        <div class="stp" data-for="rate">
+          <label>اقبل إذا الربح بالدقيقة</label>
+          <div class="stpc">
+            <button data-step="-" data-t="rate">−</button>
+            <div class="stpv"><b id="rateVal">0.60</b><span>د.أ / دقيقة</span></div>
+            <button data-step="+" data-t="rate">+</button>
+          </div>
+        </div>
+        <div class="stp" data-for="floor">
+          <label id="floorLabel">ولا تقبل أقل من</label>
+          <div class="stpc">
+            <button data-step="-" data-t="floor">−</button>
+            <div class="stpv"><b id="floorVal">2.50</b><span>د.أ</span></div>
+            <button data-step="+" data-t="floor">+</button>
+          </div>
+        </div>
+        <div class="stp" data-for="ceiling">
+          <label>ولحد</label>
+          <div class="stpc">
+            <button data-step="-" data-t="ceiling">−</button>
+            <div class="stpv"><b id="ceilingVal">12.00</b><span>د.أ</span></div>
+            <button data-step="+" data-t="ceiling">+</button>
+          </div>
+        </div>
+        <div class="stp" data-for="eta">
+          <label>أقصى وقت للوصول للزبون</label>
+          <div class="stpc">
+            <button data-step="-" data-t="eta">−</button>
+            <div class="stpv"><b id="etaVal">6</b><span>دقايق</span></div>
+            <button data-step="+" data-t="eta">+</button>
+          </div>
+        </div>
+
+        <!-- Three real offers off the driver's own shift on 2026-10-27, run live
+             through the same decide() the engine uses. -->
+        <div class="sim">
+          <h4>جرّبها ع طلبات حقيقية من أمس</h4>
+          <div id="simRows"></div>
+        </div>
+      </div>
+
+      <div class="sec"><span class="ix">03</span><span class="lb">خيارات</span></div>
+      <div class="panel">
+        <div class="tl" style="border-bottom:0">
+          <div class="gro"><b>اقبل الطلب اللي ما إله سعر</b><p>بترا رايد بتبعت طلبات مكافأة بدون سعر. إذا شغّلتها منقبلها حسب الوقت بس.</p></div>
+          <div class="sw" id="noPriceSw"></div>
+        </div>
+      </div>
+
+      <p class="hint" style="padding:18px 20px 0">القواعد تُحفظ لحالها — ما في زر حفظ.</p>
+    </section>
+
+    <!-- ══════ SMART ══════ -->
+    <section class="screen" id="smart">
+      <div class="topline">
+        <div><h1 class="ttl">الأوضاع الذكية</h1><p class="dek">القواعد بتتغيّر لحالها حسب الوقت وشو ناقصك.</p></div>
+        <div class="speed"><i></i><i></i><i></i></div>
+      </div>
+
+      <div class="sec"><span class="ix">01</span><span class="lb">هدف اليوم</span></div>
+      <div class="panel">
+        <div class="row">
+          <div style="flex:1"><b style="font-size:14.5px">بدي أجمّع اليوم</b><p class="dek" style="margin-top:5px">كل ما تقرّب ع الهدف منصير أصعب بالقبول. وإذا متأخر منخفّف شوي.</p></div>
+          <div class="sw on" data-sw></div>
+        </div>
+        <div class="stp">
+          <div class="stpc">
+            <button data-step="-" data-t="goal">−</button>
+            <div class="stpv"><b id="goalVal">60</b><span>د.أ</span></div>
+            <button data-step="+" data-t="goal">+</button>
+          </div>
+        </div>
+        <div class="goal"><i style="width:79%"></i></div>
+        <div class="row" style="margin-top:10px">
+          <span class="dek" id="goalGot">وصلت 47.50 من 60</span>
+          <span style="font-size:12.5px;font-weight:700" id="goalLeft">باقي 12.50</span>
+        </div>
+      </div>
+
+      <div class="sec"><span class="ix">02</span><span class="lb">أوقات الشغل</span></div>
+      <div class="prof live">
+        <div class="tm">16:00<br>20:00</div>
+        <div class="gro"><b>ذروة العصر</b><span>ربح بالدقيقة 0.75 · لحد 4 دقايق</span></div>
+        <div class="now"><span>شغّال</span></div>
+      </div>
+      <div class="prof">
+        <div class="tm">20:00<br>01:00</div>
+        <div class="gro"><b>سهرة</b><span>ربح بالدقيقة 0.60 · لحد 7 دقايق</span></div>
+        <div class="sw on" data-sw></div>
+      </div>
+      <div class="prof">
+        <div class="tm">06:00<br>10:00</div>
+        <div class="gro"><b>دوام الصبح</b><span>من سعر وفوق 3.50 د.أ</span></div>
+        <div class="sw" data-sw></div>
+      </div>
+      <div style="padding:14px 20px 0"><button class="btn ghost">+ ضيف وقت جديد</button></div>
+
+      <div class="sec"><span class="ix">03</span><span class="lb">الرجوع ع البيت</span></div>
+      <div class="panel">
+        <div class="row">
+          <div style="flex:1"><b style="font-size:14.5px">خلص دوامي — ردّني ع البيت</b><p class="dek" style="margin-top:5px">منقبل بس الرحلات الرايحة ع جهة بيتك. بترجع وإنت كاسب بدل ما ترجع فاضي.</p></div>
+          <div class="sw" data-sw></div>
+        </div>
+        <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--rule)" class="row">
+          <div><b style="font-size:13px">بيتي</b><div class="dek" style="margin-top:2px">صويلح · شارع الأردن</div></div>
+          <button style="background:none;border:0;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;color:var(--ink);text-decoration:underline">غيّر</button>
+        </div>
+      </div>
+
+      <div class="sec"><span class="ix">04</span><span class="lb">مناطق ما بدي إياها</span></div>
+      <div class="panel">
+        <p class="dek">ما منقبل أي طلب زبونه بهالمناطق:</p>
+        <div class="tags"><span>وسط البلد ✕</span><span>الهاشمي ✕</span></div>
+        <div class="tags"><span class="add">+ ضيف منطقة</span></div>
+      </div>
+    </section>
+
+    <!-- ══════ STATS ══════ -->
+    <section class="screen" id="stats">
+      <div class="topline">
+        <div><h1 class="ttl">الإحصائيات</h1><p class="dek">هاد الأسبوع · 18 — 24 تشرين</p></div>
+        <div class="speed"><i></i><i></i><i></i></div>
+      </div>
+
+      <div class="kpi">
+        <div><b>312.80</b><span>د.أ هاد الأسبوع</span><em>↑ 18%</em></div>
+        <div><b>11.4</b><span>د.أ بالساعة</span><em>↑ 2.1 د.أ</em></div>
+        <div><b>84</b><span>رحلة مقبولة</span><em class="flat">من 247 طلب</em></div>
+        <div><b>0.9</b><span>ثانية للقبول</span><em>أسرع من 96%</em></div>
+      </div>
+
+      <div class="sec"><span class="ix">01</span><span class="lb">الربح حسب الساعة</span></div>
+      <div class="chart">
+        <div class="c"><i style="height:28%"></i><span>6</span></div>
+        <div class="c"><i style="height:50%"></i><span>8</span></div>
+        <div class="c"><i style="height:38%"></i><span>10</span></div>
+        <div class="c"><i style="height:26%"></i><span>12</span></div>
+        <div class="c"><i style="height:44%"></i><span>14</span></div>
+        <div class="c pk"><i style="height:90%"></i><span>16</span></div>
+        <div class="c pk"><i style="height:100%"></i><span>18</span></div>
+        <div class="c"><i style="height:66%"></i><span>20</span></div>
+        <div class="c"><i style="height:54%"></i><span>22</span></div>
+        <div class="c"><i style="height:32%"></i><span>24</span></div>
+      </div>
+      <div class="advice">
+        <div class="speed"><i></i><i></i><i></i></div>
+        <p>أحسن ساعاتك <b>4 — 7 العصر</b>. لو شغّلت ساعتين زيادة بهالوقت بدل الصبح، تقديرنا بتكسب <b>+46 د.أ بالأسبوع</b>.</p>
+      </div>
+
+      <div class="sec"><span class="ix">02</span><span class="lb">من وين إجت المصاري</span></div>
+      <div class="split">
+        <div class="splitrow">
+          <span class="nm">Jeeny</span>
+          <span class="track"><i style="width:68%;background:#5B3FE8"></i></span>
+          <span class="amt">212.40</span>
+        </div>
+        <div class="splitrow">
+          <span class="nm">Petra Ride</span>
+          <span class="track"><i style="width:32%;background:#0E76CC"></i></span>
+          <span class="amt">100.40</span>
+        </div>
+      </div>
+
+      <div class="sec"><span class="ix">03</span><span class="lb">ليش رفضنا الطلبات</span></div>
+      <div class="split">
+        <div class="splitrow"><span class="nm" style="font-family:inherit;width:auto;flex:1;font-size:13px">السعر تحت الحد</span><span class="amt">59%</span></div>
+        <div class="splitrow"><span class="nm" style="font-family:inherit;width:auto;flex:1;font-size:13px">الزبون بعيد</span><span class="amt">31%</span></div>
+        <div class="splitrow"><span class="nm" style="font-family:inherit;width:auto;flex:1;font-size:13px">منطقة ممنوعة</span><span class="amt">10%</span></div>
+        <p class="hint">لو نزّلت الحد من 3.00 لـ 2.60 كنت قبلت 23 طلب زيادة — بس ربحك بالساعة كان نزل 0.8 د.أ. إعدادك هلق أحسن.</p>
+      </div>
+    </section>
+
+    <!-- ══════ SETTINGS ══════ -->
+    <section class="screen" id="settings">
+      <div class="topline">
+        <div><h1 class="ttl">الإعدادات</h1><p class="dek">جاهزية الجهاز والاشتراك.</p></div>
+        <button class="backlink" data-go="home">رجوع</button>
+      </div>
+
+      <div class="sec"><span class="ix">01</span><span class="lb">جاهزية الجهاز</span></div>
+      <div class="perm ok"><div class="ic">✓</div><div class="gro"><b>إمكانية الوصول</b><span>مفعّلة — AutoFare شايف الطلبات</span></div><div class="st">تمام</div></div>
+      <div class="perm ok"><div class="ic">✓</div><div class="gro"><b>حماية البطارية</b><span>النظام مش راح يسكّر التطبيق</span></div><div class="st">تمام</div></div>
+      <div class="perm todo"><div class="ic">!</div><div class="gro"><b>الظهور فوق التطبيقات</b><span>لازمك إياها للزر العائم</span></div><div class="st">فعّلها</div></div>
+
+      <div class="sec"><span class="ix">02</span><span class="lb">الاشتراك</span></div>
+      <div class="subs">
+        <div class="row">
+          <span style="font-size:12.5px;font-weight:700;color:var(--accept)">فعّال</span>
+          <span style="font-size:11.5px;color:var(--muted)">الباقة الشهرية</span>
+        </div>
+        <div class="days">27 <span style="font-size:16px;color:var(--muted);font-weight:600">يوم</span></div>
+        <div class="dek">بينتهي 21 تشرين الثاني</div>
+        <div class="key"><code>AF-••••-••••-3JB6</code><button>انسخ</button></div>
+        <button class="btn" style="margin-top:14px">جدّد — 5 د.أ بالشهر</button>
+        <p class="hint" style="text-align:center">ادفع بـ CliQ أو زين كاش · التفعيل فوري</p>
+      </div>
+
+      <div style="padding:16px 20px 0">
+        <button class="btn lg ghost" data-go="learn">وضع التعلّم</button>
+        <p class="hint" style="text-align:center;padding:0 8px">سجّل شاشات تطبيقات الرحلات وأرسلها — عشان نبني القبول التلقائي.</p>
+      </div>
+
+      <div class="sec"><span class="ix">03</span><span class="lb">المظهر</span></div>
+      <div class="panel">
+        <div class="tl"><div class="gro"><b>اتبع إعدادات الجهاز</b><p>يفتح غامق لما الجهاز يصير غامق.</p></div><div class="sw on" id="followSw"></div></div>
+        <div class="tl" style="border-bottom:0"><div class="gro"><b>الوضع الغامق</b><p id="darkDetail">طفّي "اتبع إعدادات الجهاز" عشان تتحكّم فيه بإيدك.</p></div><div class="sw" id="darkSw"></div></div>
+      </div>
+
+      <div class="sec"><span class="ix">04</span><span class="lb">عام</span></div>
+      <div class="panel">
+        <div class="tl"><div class="gro"><b>الزر العائم</b><p>تحكّم سريع وإنت داخل تطبيق الرحلات.</p></div><div class="sw on" data-sw></div></div>
+        <div class="tl"><div class="gro"><b>صوت عند القبول</b><p>نغمة قصيرة لما نقبل طلب.</p></div><div class="sw on" data-sw></div></div>
+        <div class="tl" style="border-bottom:0"><div class="gro"><b>اهتزاز عند الرفض</b><p>هزّة خفيفة — بتعرف إنه الطلب إجا وانرفض.</p></div><div class="sw" data-sw></div></div>
+      </div>
+
+      <p style="text-align:center;margin-top:30px;font-size:11px;font-weight:600;color:var(--muted)">AutoFare 1.0 · عمّان</p>
+    </section>
+
+    <!-- ══════ LEARN MODE ══════ -->
+    <section class="screen" id="learn">
+      <div class="topline">
+        <div>
+          <h1 class="ttl">وضع التعلّم</h1>
+          <p class="dek">منسجّل شو بتعرض تطبيقات الرحلات، وبس. ما منقبل ولا منرفض أي طلب بهالنسخة.</p>
+        </div>
+        <button class="backlink" data-go="settings">رجوع</button>
+      </div>
+
+      <div class="sec"><span class="ix">01</span><span class="lb">الخدمة</span></div>
+      <div class="perm todo" id="svcRow">
+        <div class="ic" id="svcIc">!</div>
+        <div class="gro"><b>إمكانية الوصول</b><span id="svcDetail">مش مفعّلة — اضغط فعّلها</span></div>
+      </div>
+      <div style="padding:16px 20px 0" id="svcCta">
+        <button class="btn lg" id="svcBtn">فعّلها من الإعدادات</button>
+      </div>
+
+      <div class="sec"><span class="ix">02</span><span class="lb">التسجيل</span></div>
+      <div class="panel">
+        <div class="tl">
+          <div class="gro"><b>وضع التعلّم</b><p>لما يشتغل، كل ما تفتح شاشة بتطبيق الرحلات منسجّلها بملف ع جهازك.</p></div>
+          <div class="sw" id="learnSw"></div>
+        </div>
+        <div class="tl" style="border-bottom:0">
+          <div class="gro"><b>سجّل من كل التطبيقات</b><p>خلّيها مفتوحة — أسماء تطبيقات الرحلات لسا تخمين، وهيك ما منفوّت إشي. الواتس والإيميل والبنوك ما منسجّلهم أبداً.</p></div>
+          <div class="sw on" id="allAppsSw"></div>
+        </div>
+      </div>
+
+      <div id="learnWarns"></div>
+
+      <div class="countbox" id="countBox">
+        <div class="big">0</div>
+        <div class="cap">شاشة متسجّلة</div>
+        <div class="tap">اضغط ع هالمربّع عشان يحدّث الأرقام.</div>
+      </div>
+
+      <div class="sec"><span class="ix">03</span><span class="lb">الإرسال</span></div>
+      <div style="padding:0 20px">
+        <button class="btn lg">شارك الملف</button>
+        <button class="btn lg ghost" style="margin-top:9px">امسح التسجيلات</button>
+        <p class="hint">الملف بينحفظ ع جهازك بس. ما بينرسل لحدا إلا لما تضغط شارك.</p>
+      </div>
+
+      <div class="sec"><span class="ix">04</span><span class="lb">التطبيقات اللي منراقبها</span></div>
+      <div class="pkg top">
+        <div class="sq j">J</div>
+        <div class="gro"><b>Jeeny</b><code>me.com.easytaxista</code></div>
+        <div class="st sure">متأكد</div>
+      </div>
+      <div class="pkg">
+        <div class="sq p">P</div>
+        <div class="gro"><b>Petra Ride</b><code>com.PetraRide_Captain</code></div>
+        <div class="st sure">متأكد</div>
+      </div>
+      <div class="pkg">
+        <div class="sq c">C</div>
+        <div class="gro"><b>Careem</b><code>com.careem.captain</code></div>
+        <div class="st guess">تخمين</div>
+      </div>
+      <div class="pkg">
+        <div class="sq u">U</div>
+        <div class="gro"><b>Uber Driver</b><code>com.ubercab.driver</code></div>
+        <div class="st guess">تخمين</div>
+      </div>
+
+      <div style="padding:16px 20px 0">
+        <button class="btn lg">اختار تطبيق الرحلات من جهازك</button>
+        <p class="hint">الأسماء فوق تخمين. اضغط الزر واختار تطبيق الرحلات من ع جهازك، وبصير متأكد.</p>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- bubble -->
+  <div class="bwrap" id="bwrap">
+    <div class="psheet">
+      <div class="row" style="margin-bottom:4px">
+        <img src="assets/logo-word.png" style="height:12px;filter:invert(var(--logo-invert))" alt="AutoFare">
+        <span class="band slant"><span class="unslant" style="display:flex;align-items:center;gap:6px"><i class="pip"></i>شغّال</span></span>
+      </div>
+      <div class="dek" style="margin-bottom:8px">اليوم 47.50 د.أ · 12 رحلة</div>
+      <div class="tl" style="padding:12px 0"><div class="gro"><b class="lat">Jeeny</b><p>من 3.00 وفوق</p></div><div class="sw on" data-sw></div></div>
+      <div class="tl" style="padding:12px 0"><div class="gro"><b class="lat">Petra Ride</b><p>ربح بالدقيقة 0.60</p></div><div class="sw on" data-sw></div></div>
+      <div class="unbuilt" style="margin:10px 0 0">★ تصميم بس — لسا ما انبنت.</div>
+      <button class="btn ghost" style="margin-top:10px" id="closeBubble">سكّر</button>
+    </div>
+    <div class="fab"><img src="assets/logo-mark.png" alt=""></div>
+  </div>
+
+  <nav class="tabs" id="tabs">
+    <button aria-selected="true" data-go="home">
+      <span class="ind"><svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg></span>الرئيسية
+    </button>
+    <button aria-selected="false" data-go="rules">
+      <span class="ind"><svg viewBox="0 0 24 24"><path d="M5 6h14M5 12h14M5 18h14"/><path d="M9 4v4M15 10v4M8 16v4"/></svg></span>القواعد
+    </button>
+    <button aria-selected="false" data-go="smart">
+      <span class="ind"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></span>الأوضاع
+    </button>
+    <button aria-selected="false" data-go="stats">
+      <span class="ind"><svg viewBox="0 0 24 24"><path d="M4 20V11M10 20V4M16 20v-6M22 20H2"/></svg></span>الإحصائيات
+    </button>
+  </nav>
+</div>
+
+<p class="foot">
+  مطابق لكود v0.4 بعد التحديث لـ <b>Material 3 Expressive</b> — المفاتيح والبطاقات والأزرار
+  والشريط السفلي كلها مكوّنات ماتيريال هلق، والخط IBM Plex Sans Arabic بدون أي تباعد حروف.
+  القواعد ووضع التعلّم بيتصرّفوا متل التطبيق؛ باقي الأرقام تمثيلية.<br>
+  ★ <b>لحظة القبول</b> و<b>الزر العائم</b> تصميم بس، لسا ما انبنوا — وهدول لسا بالشكل القديم.
+  <b>الإعدادات</b> و<b>وضع التعلّم</b> بتوصلهم من الرئيسية، مش من الشريط السفلي.
+</p>
+
+<script>
+const root = document.documentElement;
+function setTheme(t){
+  root.setAttribute('data-theme', t);
+  document.querySelectorAll('[data-theme-set]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.themeSet === t)));
+  const ds = document.getElementById('darkSw');
+  if (ds) ds.classList.toggle('on', t === 'dark');
+  try { localStorage.setItem('af-theme', t); } catch(e){}
+}
+document.querySelectorAll('[data-theme-set]').forEach(b => b.addEventListener('click', () => setTheme(b.dataset.themeSet)));
+const qs = new URLSearchParams(location.search);
+if (qs.has('bare')) document.body.classList.add('bare');
+if (qs.has('flat')) document.body.classList.add('flat');
+let saved = 'light'; try { saved = localStorage.getItem('af-theme') || 'light'; } catch(e){}
+setTheme(qs.get('theme') === 'dark' ? 'dark' : qs.get('theme') === 'light' ? 'light' : saved);
+
+/* Let an embedding page scroll a screen deterministically: #rules@320 */
+function applyScroll(){
+  const m = location.hash.match(/@(\d+)/);
+  if (m) document.querySelector('.vp').scrollTop = parseInt(m[1], 10);
+}
+
+const screens = [...document.querySelectorAll('.screen')];
+const pickers = [...document.querySelectorAll('[data-go]')];
+function go(id){
+  id = (id || '').split('@')[0];
+  // #bubble = the home screen with the floating-button panel over it
+  const wantBubble = id === 'bubble';
+  if (wantBubble) id = 'home';
+  if (!screens.some(s => s.id === id)) id = 'home';
+  document.getElementById('bwrap').classList.toggle('show', wantBubble);
+  screens.forEach(s => s.classList.toggle('active', s.id === id));
+  document.querySelectorAll('.picker [data-go]')
+    .forEach(b => b.setAttribute('aria-selected', String(b.dataset.go === id)));
+  // Settings and Learn are pushed screens, not tabs — the bottom bar keeps Home
+  // lit while they are open, exactly as BottomBar does in AppScaffold.kt.
+  const tabId = (id === 'settings' || id === 'learn') ? 'home' : id;
+  document.querySelectorAll('.tabs [data-go]')
+    .forEach(b => b.setAttribute('aria-selected', String(b.dataset.go === tabId)));
+  document.querySelector('.vp').scrollTop = 0;
+  if (!document.body.classList.contains('bare') && location.hash.slice(1) !== id) {
+    history.replaceState(null, '', '#' + id);
+  }
+}
+pickers.forEach(b => b.addEventListener('click', () => go(b.dataset.go)));
+go(location.hash.slice(1) || 'home');
+applyScroll();
+window.addEventListener('hashchange', () => { go(location.hash.slice(1)); applyScroll(); });
+
+document.querySelector('[data-bubble]').addEventListener('click', e => {
+  document.getElementById('bwrap').classList.add('show');
+  document.querySelectorAll('.picker button').forEach(b => b.setAttribute('aria-selected','false'));
+  e.currentTarget.setAttribute('aria-selected','true');
+});
+document.getElementById('closeBubble').addEventListener('click', () => go('home'));
+
+document.addEventListener('click', e => {
+  const sw = e.target.closest('[data-sw]');
+  if (!sw) return;
+  sw.classList.toggle('on');
+  if (sw.id === 'darkSw') setTheme(sw.classList.contains('on') ? 'dark' : 'light');
+});
+
+const power = document.getElementById('power');
+power.addEventListener('click', () => {
+  const off = document.getElementById('band').classList.toggle('off');
+  power.textContent = off ? 'ابدأ الدوام' : 'وقّف الدوام';
+  power.classList.toggle('ghost', off);
+  document.getElementById('bandTxt').textContent = off ? 'الدوام واقف' : 'الدوام شغّال';
+});
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RULES — a port of rules/Rules.kt and ui/rules/RulesScreen.kt, so the preview
+   reaches the same verdict the engine would. Keep the two in step: the strings,
+   the step sizes and the mode order all come from the Kotlin.
+   ═══════════════════════════════════════════════════════════════════════════ */
+const MODES = ['كل الطلبات', 'من سعر وفوق', 'بين سعرين', 'الربح بالدقيقة'];
+const MODE_WHY = [
+  'منقبل أي طلب يجيك، بس لازم الزبون يكون ضمن وقت الوصول اللي حاططه تحت.',
+  'منقبل الطلبات اللي سعرها يساوي الرقم اللي حاططه أو أكثر.',
+  'منقبل بس الطلبات اللي سعرها بين رقمين — مفيد لو بدك ترفض الرحلات الطويلة كمان.',
+  'بدل ما تحسب السعر لحاله — منقسم السعر ع الوقت. رحلة بـ 4 دنانير والزبون بعيد ' +
+  '10 دقايق أسوأ من رحلة بـ 3 دنانير والزبون جنبك.',
+];
+/* Which steppers each mode shows — the `when (rules.mode)` block in RulesScreen. */
+const MODE_FIELDS = [['eta'], ['floor','eta'], ['floor','ceiling','eta'], ['rate','floor','eta']];
+
+/* RuleSet() defaults, straight off Rules.kt — note auto-accept starts OFF. */
+const ruleDefaults = () => ({
+  enabled: false, mode: 3, rate: 0.60, floor: 2.50,
+  ceiling: 12.00, maxEtaMin: 6, acceptNoPrice: false,
+});
+const RULE_APPS = [['jeeny','Jeeny'], ['petra','Petra Ride']];
+const ruleStore = { jeeny: ruleDefaults(), petra: ruleDefaults() };
+let appIdx = 0;
+const liveRules = () => ruleStore[RULE_APPS[appIdx][0]];
+
+/** decide() from Rules.kt — same order of checks, same Reason wording. */
+function decide(fare, eta, r) {
+  if (!r.enabled) return { ok:false, why:'القبول التلقائي مطفي' };
+  if (eta == null) return { ok:false, why:'ما بيّن وقت الوصول' };
+  if (eta > r.maxEtaMin) return { ok:false, why:'الزبون بعيد' };
+  if (fare == null) return r.acceptNoPrice
+    ? { ok:true, why:'بنقبل' }
+    : { ok:false, why:'ما بيّن السعر' };
+  switch (r.mode) {
+    case 0: return { ok:true, why:'بنقبل' };
+    case 1: return fare >= r.floor
+      ? { ok:true, why:'بنقبل' } : { ok:false, why:'تحت الحد' };
+    case 2:
+      if (fare < r.floor) return { ok:false, why:'تحت الحد' };
+      if (fare > r.ceiling) return { ok:false, why:'فوق الحد' };
+      return { ok:true, why:'بنقبل' };
+    default:
+      // the floor still applies: a great rate on a tiny fare is still a tiny fare
+      if (fare < r.floor) return { ok:false, why:'تحت الحد' };
+      if (fare / eta < r.rate) return { ok:false, why:'الربح بالدقيقة قليل' };
+      return { ok:true, why:'بنقبل' };
+  }
+}
+
+/* The three offers the rules screen rehearses on — real ones off the driver's
+   own shift, 2026-10-27, so the preview is a rehearsal and not an illustration. */
+const SIM_OFFERS = [
+  { label:'1.50 د.أ · الزبون 4 دقايق',  fare:1.50, eta:4 },
+  { label:'1.58 د.أ · الزبون دقيقة',   fare:1.58, eta:1 },
+  { label:'3.43 د.أ · الزبون دقيقتين', fare:3.43, eta:2 },
+];
+
+function renderRules() {
+  const [, appName] = RULE_APPS[appIdx];
+  const r = liveRules();
+
+  document.querySelectorAll('#appTabs button')
+    .forEach((b, i) => b.setAttribute('aria-selected', String(i === appIdx)));
+  document.querySelectorAll('#modeTabs button')
+    .forEach((b, i) => b.setAttribute('aria-selected', String(i === r.mode)));
+
+  document.getElementById('armTitle').textContent = 'اقبل الطلبات بدالي بـ ' + appName;
+  document.getElementById('armDetail').textContent = r.enabled
+    ? 'شغّال. أول ما يجي طلب بمواصفاتك منضغط قبول فوراً.'
+    : 'مطفي. منراقب الطلبات وما منضغط ولا شي.';
+  document.getElementById('armSw').classList.toggle('on', r.enabled);
+  document.getElementById('armHint').style.display = r.enabled ? '' : 'none';
+  document.getElementById('noPriceSw').classList.toggle('on', r.acceptNoPrice);
+
+  document.getElementById('modeName').textContent = MODES[r.mode];
+  document.getElementById('modeWhy').textContent = MODE_WHY[r.mode];
+
+  const fields = MODE_FIELDS[r.mode];
+  document.querySelectorAll('#rules .stp[data-for]').forEach(s => {
+    s.style.display = fields.includes(s.dataset.for) ? '' : 'none';
+  });
+  // the floor is a minimum alongside the rate in per-minute mode, and the
+  // starting price on its own in the others
+  document.getElementById('floorLabel').textContent =
+    r.mode === 3 ? 'ولا تقبل أقل من' : 'يبدأ القبول من';
+
+  document.getElementById('rateVal').textContent = r.rate.toFixed(2);
+  document.getElementById('floorVal').textContent = r.floor.toFixed(2);
+  document.getElementById('ceilingVal').textContent = r.ceiling.toFixed(2);
+  document.getElementById('etaVal').textContent = String(r.maxEtaMin);
+
+  // judged on the numbers, not on whether the switch happens to be on
+  const judged = Object.assign({}, r, { enabled: true });
+  document.getElementById('simRows').innerHTML = SIM_OFFERS.map(o => {
+    const d = decide(o.fare, o.eta, judged);
+    return '<div class="simrow">'
+      + '<span>' + o.label + '</span>'
+      + '<span class="v">' + (o.fare / o.eta).toFixed(2) + '</span>'
+      + '<span class="vt ' + (d.ok ? 'y' : 'n') + '">' + d.why + '</span>'
+      + '</div>';
+  }).join('');
+}
+
+document.querySelectorAll('#rules [data-step]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const r = liveRules();
+    const dir = btn.dataset.step === '+' ? 1 : -1;
+    switch (btn.dataset.t) {
+      case 'rate':  r.rate  = Math.max(0, +(r.rate  + dir * 0.05).toFixed(2)); break;
+      case 'floor': r.floor = Math.max(0, +(r.floor + dir * 0.25).toFixed(2)); break;
+      // kept above the floor, or the band is empty and nothing is ever accepted
+      case 'ceiling': r.ceiling = Math.max(r.floor, +(r.ceiling + dir * 0.25).toFixed(2)); break;
+      case 'eta':   r.maxEtaMin = Math.max(1, r.maxEtaMin + dir); break;
+    }
+    renderRules();
+  });
+});
+document.getElementById('armSw').addEventListener('click', () => {
+  const r = liveRules(); r.enabled = !r.enabled; renderRules();
+});
+document.getElementById('noPriceSw').addEventListener('click', () => {
+  const r = liveRules(); r.acceptNoPrice = !r.acceptNoPrice; renderRules();
+});
+document.querySelectorAll('#appTabs button').forEach((b, i) =>
+  b.addEventListener('click', () => { appIdx = i; renderRules(); }));
+document.querySelectorAll('#modeTabs button').forEach((b, i) =>
+  b.addEventListener('click', () => { liveRules().mode = i; renderRules(); }));
+renderRules();
+
+/* ═══════════════ SMART — the day's goal ═══════════════ */
+let goal = 60;
+const EARNED = 47.50;
+document.querySelectorAll('#smart [data-step]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    goal = btn.dataset.step === '+' ? goal + 5 : Math.max(5, goal - 5);
+    document.getElementById('goalVal').textContent = String(goal);
+    document.querySelector('#smart .goal i').style.width =
+      Math.min(100, EARNED / goal * 100).toFixed(1) + '%';
+    document.getElementById('goalGot').textContent = 'وصلت 47.50 من ' + goal;
+    document.getElementById('goalLeft').textContent =
+      'باقي ' + Math.max(0, goal - EARNED).toFixed(2);
+  });
+});
+
+/* ═══════════════ ONBOARDING — the three steps from OnboardingScreen.kt ═══════════════ */
+const OB_STEPS = [
+  {
+    head: 'خلّي AutoFare<br>يشوف الطلبات',
+    body: 'عشان نقبل بدالك، لازم نشوف الشاشة لما يجيك طلب. اضغط الزر وفعّل AutoFare من قائمة إمكانية الوصول.',
+    cta: 'افتح الإعدادات',
+    re: 'ما منقرأ ولا منخزّن أي إشي خارج تطبيقات الرحلات.',
+  },
+  {
+    head: 'خلّي التطبيق<br>شغّال دايماً',
+    body: 'هواوي وشاومي بيسكّروا التطبيقات لحالهم عشان البطارية. لازم تستثني AutoFare، غير هيك بيوقف وإنت بالطريق.',
+    cta: 'افتح إعدادات البطارية',
+    re: 'هاي أهم خطوة — بدونها التطبيق ما بظل شغّال.',
+  },
+  {
+    head: 'حدّد<br>قواعدك',
+    body: 'قلّنا شو الطلب اللي بدك إياه — السعر، وقت الوصول، ولا الربح بالدقيقة. وإحنا منقرّر بدالك بأقل من ثانية.',
+    cta: 'يلا نبلّش',
+    re: 'بتقدر تغيّرها بأي وقت من شاشة القواعد.',
+  },
+];
+let obIdx = 0;
+function renderOnboarding() {
+  const s = OB_STEPS[obIdx];
+  document.querySelectorAll('#obSteps i').forEach((b, i) => b.classList.toggle('done', i <= obIdx));
+  document.getElementById('obNum').textContent = '0' + (obIdx + 1) + ' / 0' + OB_STEPS.length;
+  document.getElementById('obHead').innerHTML = s.head;
+  document.getElementById('obBody').textContent = s.body;
+  document.getElementById('obCta').textContent = s.cta;
+  document.getElementById('obRe').textContent = s.re;
+  document.getElementById('obSkip').classList.toggle('hide', obIdx === OB_STEPS.length - 1);
+}
+function finishOnboarding() { obIdx = 0; renderOnboarding(); go('home'); }
+document.getElementById('obCta').addEventListener('click', () => {
+  if (obIdx < OB_STEPS.length - 1) { obIdx++; renderOnboarding(); } else finishOnboarding();
+});
+document.getElementById('obSkip').addEventListener('click', () => {
+  if (obIdx < OB_STEPS.length - 1) finishOnboarding();
+});
+renderOnboarding();
+
+/* ═══════════════ SETTINGS — appearance ═══════════════ */
+let followSystem = true;
+function renderAppearance() {
+  document.getElementById('followSw').classList.toggle('on', followSystem);
+  document.getElementById('darkDetail').textContent = followSystem
+    ? 'طفّي "اتبع إعدادات الجهاز" عشان تتحكّم فيه بإيدك.'
+    : 'أريح للعين بالليل وإنت سايق.';
+}
+document.getElementById('followSw').addEventListener('click', () => {
+  followSystem = !followSystem; renderAppearance();
+});
+document.getElementById('darkSw').addEventListener('click', () => {
+  followSystem = false;
+  setTheme(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+  renderAppearance();
+});
+renderAppearance();
+
+/* ═══════════════ LEARN MODE ═══════════════ */
+/* No ride app has been picked yet, which is the state a driver first sees — it
+   is what makes the second warning fire the moment recording is switched on. */
+let svcOn = false, learning = false, captureAll = true;
+function renderLearn() {
+  const row = document.getElementById('svcRow');
+  row.classList.toggle('ok', svcOn);
+  row.classList.toggle('todo', !svcOn);
+  document.getElementById('svcIc').textContent = svcOn ? '✓' : '!';
+  document.getElementById('svcDetail').textContent = svcOn
+    ? 'مفعّلة — AutoFare شايف الشاشة'
+    : 'مش مفعّلة — اضغط فعّلها';
+  document.getElementById('svcCta').style.display = svcOn ? 'none' : '';
+  document.getElementById('learnSw').classList.toggle('on', learning);
+  document.getElementById('allAppsSw').classList.toggle('on', captureAll);
+
+  const warns = [];
+  if (learning && !svcOn) {
+    warns.push('التسجيل مفتوح بس إذن إمكانية الوصول مطفي، معناها AutoFare ما بيشوف ' +
+      'الشاشة وما رح يسجّل ولا إشي. فعّله من فوق.');
+  }
+  if (learning && !captureAll) {
+    warns.push('ما اخترت تطبيقات الرحلات، و«سجّل من كل التطبيقات» مطفي — هيك ما رح ' +
+      'يتسجّل ولا إشي. افتح واحد من الاثنين.');
+  } else if (learning) {
+    warns.push('لسا ما اخترت تطبيقات الرحلات من جهازك. عنجد منصح تختارهم من تحت — ' +
+      'هيك منتأكد إنه جيني وبترا رايد مراقبين بالزبط.');
+  }
+  document.getElementById('learnWarns').innerHTML =
+    warns.map(w => '<div class="warn"><b>!</b><p>' + w + '</p></div>').join('');
+}
+document.getElementById('svcBtn').addEventListener('click', () => { svcOn = !svcOn; renderLearn(); });
+document.getElementById('learnSw').addEventListener('click', () => { learning = !learning; renderLearn(); });
+document.getElementById('allAppsSw').addEventListener('click', () => { captureAll = !captureAll; renderLearn(); });
+renderLearn();
+</script>
+</body>
+</html>

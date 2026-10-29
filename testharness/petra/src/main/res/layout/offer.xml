@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The Petra Ride offer, as captured on 2026-10-27. The ids are the point: these
+  five are what PetraDetector looks up, and they are spelled exactly as the real
+  app spells them.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <Button
+        android:id="@+id/reject_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/reject" />
+
+    <TextView
+        android:id="@+id/estimated_trip_price"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:textSize="28sp"
+        android:text="@string/estimated_trip_price" />
+
+    <TextView
+        android:id="@+id/estimated_time_to_pick_up"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="18sp"
+        android:text="@string/estimated_time_to_pick_up" />
+
+    <TextView
+        android:id="@+id/drop_off_location_title_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="@string/drop_off" />
+
+    <Button
+        android:id="@+id/accept_button"
+        android:layout_width="match_parent"
+        android:layout_height="80dp"
+        android:layout_marginTop="40dp"
+        android:textSize="24sp"
+        android:text="@string/accept" />
+</LinearLayout>

@@ -1,0 +1,11 @@
+                  android.widget.FrameLayout id=com.PetraRide_Captain:id/map_view CLICKABLE bounds=0,87,904,2277
+                      android.view.View desc="خرائط Google" CLICKABLE bounds=0,87,904,2277
+                        android.view.View desc="محدّد الخريطة" CLICKABLE bounds=616,691,693,827
+                        android.view.View desc="محدّد الخريطة" CLICKABLE bounds=200,231,300,379
+                  android.widget.Button id=com.PetraRide_Captain:id/reject_button text="رفض" CLICKABLE bounds=38,125,269,223
+                android.view.ViewGroup id=com.PetraRide_Captain:id/left_buttons_layout desc="سفير بترا رايد" CLICKABLE hidden bounds=0,1132,0,1132
+                                android.widget.TextView id=com.PetraRide_Captain:id/estimated_trip_price text="1.58 د.أ" bounds=64,1607,179,1672
+                                android.widget.TextView id=com.PetraRide_Captain:id/estimated_time_to_pick_up text="1.13 دقيقة • 210 متر" bounds=64,1672,341,1742
+                                  android.widget.TextView text="شارع إبراهيم الحربي, الأردن" bounds=398,1858,737,1928
+                                  android.widget.TextView id=com.PetraRide_Captain:id/drop_off_location_title_label text="Abu Ghosh, Amman, Jordan" bounds=306,1958,737,2028
+                            android.widget.Button id=com.PetraRide_Captain:id/accept_button text="قبول" CLICKABLE bounds=64,2092,840,2222

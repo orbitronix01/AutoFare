@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Generated from app/src/test/resources/captures/jeeny-offer-metres.txt.
+  Do not retype these: the fare carries an invisible U+200E before JOD, the ETA
+  and distance carry a damma on the ain, and the destination icon description has
+  two spaces in it. Every one of those has broken a parser already.
+-->
+<resources>
+    <string name="car_class">إيكونومي</string>
+    <string name="pickup_eta">يبعُد 2 دقائق</string>
+    <string name="pickup_distance">يبعُد 963م</string>
+    <string name="fare">‎JOD 3.43</string>
+    <string name="pickup_address">Tariq - Abdul Khaleq Yaghmour</string>
+    <string name="dropoff_address">مدرسة منصور كريشان الأساسية للبنين، Umm Habibah St., Al-Nasr</string>
+    <string name="accept_offer">قبول العرض</string>
+    <string name="reject_desc">Reject Button</string>
+    <string name="pick_up_icon">Pick Up Icon</string>
+    <string name="destination_icon">Destination  Icon</string>
+</resources>

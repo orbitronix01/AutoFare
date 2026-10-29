@@ -1,0 +1,19 @@
+                                android.view.View CLICKABLE bounds=-209,1329,694,2316
+                                      android.widget.TextView text="إيكونومي" bounds=478,1398,609,1450
+                                  android.widget.TextView text="يبعُد 1 دقائق" bounds=27,1477,641,1580
+                                  android.widget.TextView text="يبعُد 401م" bounds=27,1596,641,1655
+                                  android.widget.ImageView desc="Reject Button" CLICKABLE hidden bounds=-156,1382,-25,1513
+                                  android.widget.TextView text="‎JOD 2.03" bounds=-156,1737,641,1810
+                                  android.view.View desc="Pick Up Icon" bounds=573,1930,636,1993
+                                  android.widget.TextView text="Tla al-Ali - Wasfi At-Tall Street, 197" bounds=-144,1934,557,1993
+                                  android.view.View desc="Destination  Icon" bounds=573,2046,636,2109
+                                  android.widget.TextView text="Qahwa BLK - Abdoun Circle, Zahran" bounds=-156,2050,557,2109
+                                  android.view.View CLICKABLE bounds=-156,2151,641,2277
+                                    android.widget.TextView text="قبول العرض" bounds=122,2183,363,2250
+                          android.widget.FrameLayout CLICKABLE bounds=-209,0,694,2316
+                              android.view.View desc="خرائط Google" CLICKABLE bounds=-209,0,694,2316
+                                android.view.View desc="محدّد الخريطة" CLICKABLE bounds=121,886,360,1108
+                                android.view.View desc="محدّد الخريطة" CLICKABLE bounds=121,886,360,1108
+                                android.view.View desc="محدّد الخريطة" CLICKABLE bounds=219,161,310,312
+                                android.view.View desc="محدّد الخريطة" CLICKABLE bounds=126,111,339,333
+                                android.view.View desc="محدّد الخريطة" CLICKABLE bounds=126,111,339,333

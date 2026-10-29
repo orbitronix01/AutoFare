@@ -1,0 +1,13 @@
+          android.view.View desc="إغلاق الورقة" CLICKABLE bounds=0,0,904,1329
+            android.view.View CLICKABLE bounds=0,1329,904,2316
+                  android.widget.TextView text="إيكونومي" bounds=688,1398,819,1450
+              android.widget.TextView text="يبعُد 6 دقائق" bounds=237,1477,851,1580
+              android.widget.TextView text="يبعُد ٢٫٧كم" bounds=237,1596,851,1655
+              android.widget.ImageView desc="Reject Button" CLICKABLE bounds=53,1382,184,1513
+              android.widget.TextView text="‎JOD 1.50" bounds=53,1737,851,1810
+              android.view.View desc="Pick Up Icon" bounds=783,1930,846,1993
+              android.widget.TextView text="Tariq - كعب السعدي, 33" bounds=326,1934,767,1993
+              android.view.View desc="Destination  Icon" bounds=783,2046,846,2109
+              android.widget.TextView text="ستوديو القرم طبربور، Tariq St" bounds=262,2050,767,2109
+              android.view.View CLICKABLE bounds=53,2151,851,2277
+                android.widget.TextView text="قبول العرض" bounds=332,2183,573,2250

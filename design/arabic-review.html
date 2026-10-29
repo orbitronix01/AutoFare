@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AutoFare — مراجعة النصوص العربية</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;700;800;900&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F4F2ED; --raised:#FFFFFF; --sunk:#EDEAE3;
+  --ink:#121417; --ink-2:#3A3F45; --muted:#71767C;
+  --rule:#DFDBD2; --rule-2:#C9C4B8;
+  --accept:#0F6B43; --accept-bg:#E3EFE8;
+  --flag:#8A6412; --flag-bg:#F4EDDC;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --paper:#121315; --raised:#191B1E; --sunk:#0D0E10;
+    --ink:#F2F1EC; --ink-2:#C6C8CB; --muted:#898E94;
+    --rule:#272A2E; --rule-2:#3A3E43;
+    --accept:#4FCB8C; --accept-bg:#132420;
+    --flag:#D7A64C; --flag-bg:#241E12;
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:'IBM Plex Sans Arabic',sans-serif;
+  background:var(--paper);color:var(--ink);
+  line-height:1.8;padding:30px 18px 90px;
+}
+.wrap{max-width:720px;margin:0 auto}
+h1{font-size:27px;font-weight:700;letter-spacing:0;line-height:1.35}
+.sub{font-size:13.5px;color:var(--muted);margin-top:8px;max-width:58ch}
+.n{font-family:'Archivo';font-variant-numeric:tabular-nums}
+
+.how{margin-top:22px;background:var(--raised);border:1px solid var(--rule);border-radius:16px;padding:18px}
+.how b{display:block;font-size:14px;margin-bottom:8px}
+.how ol{margin:0 18px;font-size:13px;color:var(--ink-2)}
+.how li{margin-bottom:5px}
+
+.bar{position:sticky;top:0;z-index:5;background:var(--paper);padding:16px 0 12px;
+     border-bottom:1px solid var(--rule);margin-top:24px;display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+.bar input[type=search]{flex:1;min-width:190px;font-family:inherit;font-size:13.5px;padding:11px 14px;
+     border:1px solid var(--rule-2);border-radius:11px;background:var(--raised);color:var(--ink)}
+.count{font-size:12.5px;color:var(--muted)}
+
+h2{font-size:12px;font-weight:700;color:var(--muted);margin:34px 0 10px;
+   display:flex;align-items:center;gap:11px}
+h2::after{content:'';flex:1;height:1px;background:var(--rule)}
+
+.item{border-bottom:1px solid var(--rule);padding:15px 0}
+.src{font-family:'Archivo';font-size:10.5px;color:var(--muted);direction:ltr;text-align:right;margin-bottom:7px}
+.cur{font-size:15px;line-height:1.85;white-space:pre-wrap}
+.item textarea{width:100%;margin-top:9px;font-family:inherit;font-size:14.5px;line-height:1.8;
+   padding:11px 13px;border:1px solid var(--rule-2);border-radius:11px;background:var(--raised);
+   color:var(--ink);resize:vertical;min-height:46px}
+.item textarea:focus{outline:2px solid var(--ink);outline-offset:-1px;border-color:transparent}
+.item.edited{background:var(--accept-bg);margin:0 -12px;padding:15px 12px;border-radius:12px}
+.item.edited .cur{text-decoration:line-through;opacity:.55}
+
+.locked{background:var(--flag-bg);border:1px solid var(--flag);border-radius:14px;padding:15px;margin-top:10px}
+.locked .warn{font-size:12.5px;color:var(--ink);line-height:1.75}
+.locked .warn b{color:var(--flag)}
+.item.lock textarea{display:none}
+.item.lock .cur{opacity:.7}
+.tag{display:inline-block;font-size:10.5px;font-weight:700;color:var(--flag);
+     background:var(--flag-bg);border-radius:5px;padding:2px 8px;margin-right:8px}
+
+.foot{position:fixed;bottom:0;right:0;left:0;background:var(--raised);border-top:1px solid var(--rule);
+      padding:13px 18px;display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap}
+button{font-family:inherit;font-size:14px;font-weight:700;padding:13px 22px;border-radius:12px;
+       border:0;cursor:pointer;background:var(--ink);color:var(--paper)}
+button.ghost{background:transparent;color:var(--ink);border:1px solid var(--rule-2)}
+.saved{font-size:12px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>مراجعة النصوص العربية</h1>
+  <p class="sub">
+    كل جملة عربية بتظهر بتطبيق AutoFare موجودة هون. اقرأها متل ما سائق رح يقرأها،
+    وإذا في إشي مش مزبوط أو مش طبيعي بالأردني — اكتب البديل تحتها.
+    اللي ما بتغيّره بظل متل ما هو.
+  </p>
+
+  <div class="how">
+    <b>كيف تراجعها</b>
+    <ol>
+      <li>اقرأ الجملة بصوت عالي. إذا ما بتنقال هيك بالشارع، غيّرها.</li>
+      <li>اكتب البديل بالمربّع اللي تحتها.</li>
+      <li>لما تخلص، اضغط «انسخ التعديلات» وابعتها.</li>
+    </ol>
+  </div>
+
+  <div class="locked">
+    <p class="warn">
+      <b>انتبه:</b> في نصوص معلّمة <span class="tag">ما بتتغيّر</span> — هاي مش كلام
+      إحنا منعرضه، هاي كلمات منبحث عنها جوّا شاشات جيني وبترا رايد عشان نعرف إنه
+      إجا طلب. لو تغيّرت، التطبيق بطّل يشوف الطلبات. منعرضها بس عشان تشوفها.
+    </p>
+  </div>
+
+  <div class="bar">
+    <input type="search" id="q" placeholder="دوّر عن جملة…" aria-label="دوّر عن جملة">
+    <span class="count" id="count"></span>
+  </div>
+
+  <div id="list"></div>
+</div>
+
+<div class="foot">
+  <button id="copy">انسخ التعديلات</button>
+  <button class="ghost" id="clear">امسح كل شي</button>
+  <span class="saved" id="saved"></span>
+</div>
+
+<script src="arabic-strings.js"></script>
+<script>
+const KEY = 'autofare-ar-review';
+let edits = {};
+try { edits = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) { edits = {}; }
+
+const list = document.getElementById('list');
+const countEl = document.getElementById('count');
+const savedEl = document.getElementById('saved');
+
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(edits)); } catch (e) {}
+  const n = Object.keys(edits).length;
+  savedEl.textContent = n ? `${n} تعديل محفوظ` : '';
+  countEl.textContent = `${STRINGS.length} جملة · ${n} معدّلة`;
+}
+
+function render(filter) {
+  const q = (filter || '').trim();
+  list.innerHTML = '';
+  let lastScreen = null;
+
+  STRINGS.filter(s => !q || s.text.includes(q)).forEach(s => {
+    if (s.screen !== lastScreen) {
+      lastScreen = s.screen;
+      const h = document.createElement('h2');
+      h.textContent = s.screen;
+      list.appendChild(h);
+    }
+
+    const row = document.createElement('div');
+    row.className = 'item' + (s.locked ? ' lock' : '') + (edits[s.id] ? ' edited' : '');
+
+    const src = document.createElement('div');
+    src.className = 'src';
+    src.textContent = `${s.file}:${s.line}`;
+    row.appendChild(src);
+
+    const cur = document.createElement('div');
+    cur.className = 'cur';
+    if (s.locked) {
+      const tag = document.createElement('span');
+      tag.className = 'tag';
+      tag.textContent = 'ما بتتغيّر';
+      cur.appendChild(tag);
+    }
+    // \n in the Kotlin source is a real line break on screen
+    cur.appendChild(document.createTextNode(s.text.replace(/\\n/g, '\n')));
+    row.appendChild(cur);
+
+    if (!s.locked) {
+      const ta = document.createElement('textarea');
+      ta.placeholder = 'البديل…';
+      ta.value = edits[s.id] || '';
+      ta.rows = 1;
+      ta.addEventListener('input', () => {
+        const v = ta.value.trim();
+        if (v) edits[s.id] = v; else delete edits[s.id];
+        row.classList.toggle('edited', !!v);
+        ta.style.height = 'auto';
+        ta.style.height = ta.scrollHeight + 'px';
+        save();
+      });
+      row.appendChild(ta);
+    }
+
+    list.appendChild(row);
+  });
+}
+
+document.getElementById('q').addEventListener('input', e => render(e.target.value));
+
+document.getElementById('copy').addEventListener('click', async () => {
+  const lines = STRINGS
+    .filter(s => edits[s.id])
+    .map(s => `${s.file}:${s.line}\nقديم: ${s.text}\nجديد: ${edits[s.id]}\n`);
+  if (!lines.length) { alert('ما في تعديلات لسا.'); return; }
+  const blob = `AutoFare — تعديلات النصوص (${lines.length})\n\n` + lines.join('\n');
+  try {
+    await navigator.clipboard.writeText(blob);
+    alert(`انتسخت ${lines.length} تعديل. الصقها وابعتها.`);
+  } catch (e) {
+    // clipboard is blocked on file:// in some browsers — fall back to a prompt
+    window.prompt('انسخ من هون:', blob);
+  }
+});
+
+document.getElementById('clear').addEventListener('click', () => {
+  if (!confirm('بتمسح كل التعديلات؟')) return;
+  edits = {};
+  save();
+  render(document.getElementById('q').value);
+});
+
+render('');
+save();
+</script>
+</body>
+</html>

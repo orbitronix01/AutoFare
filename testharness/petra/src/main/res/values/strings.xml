@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generated from app/src/test/resources/captures/petra-offer-basic.txt - do not retype -->
+<resources>
+    <string name="estimated_trip_price">1.58 د.أ</string>
+    <string name="estimated_time_to_pick_up">1.13 دقيقة • 210 متر</string>
+    <string name="drop_off">Abu Ghosh, Amman, Jordan</string>
+    <string name="accept">قبول</string>
+    <string name="reject">رفض</string>
+</resources>

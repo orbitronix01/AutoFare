@@ -1,0 +1,11 @@
+                  android.widget.FrameLayout id=com.PetraRide_Captain:id/map_view CLICKABLE bounds=-482,87,421,2277
+                      android.view.View desc="خرائط Google" CLICKABLE bounds=-482,87,421,2277
+                        android.view.View desc="محدّد الخريطة" CLICKABLE bounds=113,733,190,869
+                        android.view.View desc="محدّد الخريطة" CLICKABLE bounds=-262,189,-162,337
+                  android.widget.Button id=com.PetraRide_Captain:id/reject_button text="رفض" CLICKABLE bounds=-444,125,-213,223
+                android.view.ViewGroup id=com.PetraRide_Captain:id/left_buttons_layout desc="سفير بترا رايد" CLICKABLE hidden bounds=-482,1132,-482,1132
+                                android.widget.TextView id=com.PetraRide_Captain:id/estimated_trip_price text="1.74 د.أ" bounds=-418,1607,-303,1672
+                                android.widget.TextView id=com.PetraRide_Captain:id/estimated_time_to_pick_up text="2.93 دقيقة • 1.41 كم" bounds=-418,1672,-144,1742
+                                  android.widget.TextView text="شارع الامير فيصل بن الحسين, Amman, Jordan" bounds=-379,1858,254,1928
+                                  android.widget.TextView id=com.PetraRide_Captain:id/drop_off_location_title_label text="شارع فلاح دهيم الدعجة, الأردن" bounds=-127,1958,254,2028
+                            android.widget.Button id=com.PetraRide_Captain:id/accept_button text="قبول" CLICKABLE bounds=-418,2092,357,2222

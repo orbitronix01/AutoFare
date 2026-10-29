@@ -1,0 +1,17 @@
+# Signing secrets — never commit
+keystore/
+
+# Gradle / build output
+build/
+.gradle/
+local.properties
+*.hprof
+
+# IDE
+.idea/
+.kotlin/
+*.iml
+
+# OS
+Thumbs.db
+desktop.ini

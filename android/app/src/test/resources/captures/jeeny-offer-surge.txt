@@ -1,0 +1,15 @@
+          android.view.View desc="إغلاق الورقة" CLICKABLE bounds=0,0,904,1329
+            android.view.View CLICKABLE bounds=0,1329,904,2316
+                  android.widget.TextView text="إيكونومي" bounds=688,1398,819,1450
+              android.widget.TextView text="يبعُد 3 دقائق" bounds=237,1477,851,1580
+              android.widget.TextView text="يبعُد ٧٧٩م" bounds=237,1596,851,1655
+              android.widget.ImageView desc="Reject Button" CLICKABLE bounds=53,1382,184,1513
+              android.widget.TextView text="‎JOD 3.58" bounds=186,1737,851,1810
+              android.view.View desc="surge_upsell" bounds=133,1745,186,1798
+              android.widget.TextView text="1.1x" bounds=53,1744,112,1803
+              android.view.View desc="Pick Up Icon" bounds=783,1930,846,1993
+              android.widget.TextView text="Al Abdali - Uday Abu Tayeh, 28" bounds=129,1934,767,1993
+              android.view.View desc="Destination  Icon" bounds=783,2046,846,2109
+              android.widget.TextView text="Al Jama'a Street 415" bounds=348,2050,767,2109
+              android.view.View CLICKABLE bounds=53,2151,851,2277
+                android.widget.TextView text="قبول العرض" bounds=332,2183,573,2250

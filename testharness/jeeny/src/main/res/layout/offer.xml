@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The Jeeny offer sheet, as captured on 2026-10-27.
+
+  Deliberately id-less on everything the detector reads, because the real app is:
+  its offer is a flat pile of views with no resource ids, so every figure has to
+  be found by its words. The one id here is on the accept wrapper, and only so
+  the harness itself can attach a listener to it.
+
+  The important structural detail is at the bottom: `قبول العرض` is a TextView —
+  not clickable — inside a clickable wrapper. Pressing the text does nothing.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/car_class" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:textSize="18sp"
+        android:text="@string/pickup_eta" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="18sp"
+        android:text="@string/pickup_distance" />
+
+    <ImageView
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginTop="12dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:background="#DDDDDD"
+        android:contentDescription="@string/reject_desc" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:textSize="28sp"
+        android:text="@string/fare" />
+
+    <View
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:layout_marginTop="16dp"
+        android:background="#DDDDDD"
+        android:importantForAccessibility="yes"
+        android:contentDescription="@string/pick_up_icon" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/pickup_address" />
+
+    <View
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:layout_marginTop="12dp"
+        android:background="#DDDDDD"
+        android:importantForAccessibility="yes"
+        android:contentDescription="@string/destination_icon" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/dropoff_address" />
+
+    <LinearLayout
+        android:id="@+id/harness_accept_wrapper"
+        android:layout_width="match_parent"
+        android:layout_height="80dp"
+        android:layout_marginTop="32dp"
+        android:background="#1A7F37"
+        android:clickable="true"
+        android:focusable="true"
+        android:gravity="center"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#FFFFFF"
+            android:textSize="24sp"
+            android:text="@string/accept_offer" />
+    </LinearLayout>
+</LinearLayout>

@@ -1,0 +1,19 @@
+                                android.view.View CLICKABLE bounds=0,1329,904,2316
+                                      android.widget.TextView text="إيكونومي" bounds=688,1398,819,1450
+                                  android.widget.TextView text="يبعُد 4 دقائق" bounds=237,1477,851,1580
+                                  android.widget.TextView text="يبعُد 1.8كم" bounds=237,1596,851,1655
+                                  android.widget.ImageView desc="Reject Button" CLICKABLE bounds=53,1382,184,1513
+                                  android.widget.TextView text="‎JOD 1.50" bounds=53,1737,851,1810
+                                  android.view.View desc="Pick Up Icon" bounds=783,1930,846,1993
+                                  android.widget.TextView text="Tariq - sameer abu eqab street, 1" bounds=73,1934,767,1993
+                                  android.view.View desc="Destination  Icon" bounds=783,2046,846,2109
+                                  android.widget.TextView text="Raba Street 6" bounds=482,2050,767,2109
+                                  android.view.View CLICKABLE bounds=53,2151,851,2277
+                                    android.widget.TextView text="قبول العرض" bounds=332,2183,573,2250
+                          android.widget.FrameLayout CLICKABLE bounds=0,0,904,2316
+                              android.view.View desc="خرائط Google" CLICKABLE bounds=0,0,904,2316
+                                android.view.View desc="محدّد الخريطة" CLICKABLE bounds=366,750,457,901
+                                android.view.View desc="محدّد الخريطة" CLICKABLE bounds=429,470,647,692
+                                android.view.View desc="محدّد الخريطة" CLICKABLE bounds=429,470,647,692
+                                android.view.View desc="محدّد الخريطة" CLICKABLE bounds=169,262,386,484
+                                android.view.View desc="محدّد الخريطة" CLICKABLE bounds=169,262,386,484

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  No android:packageNames filter on purpose: learning mode can be pointed at any
+  app so the capture can be proven to work before a driver is involved. The
+  service itself ignores everything except the ride apps unless the tester turns
+  "capture all apps" on.
+
+  notificationTimeout is 0, and that is the single most important number in this
+  file. The driver is racing other drivers for the same ride: whoever's finger —
+  or service — lands on Accept first gets it. Every millisecond Android spends
+  coalescing events is a millisecond handed to somebody else, and an offer in a
+  busy market can be gone in well under a second. The event flood this invites is
+  cheap, because the accept path drops an event in two comparisons before it
+  touches the tree.
+
+  typeWindowsChanged is here as a second, earlier signal: a popup that arrives in
+  its own window changes the window list, sometimes before any content event
+  lands. Two chances at the first frame are better than one.
+
+  flagRetrieveInteractiveWindows is what populates getWindows(), so the offer's own
+  window can be read even once focus has moved off it.
+-->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged|typeWindowsChanged"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:accessibilityFlags="flagReportViewIds|flagIncludeNotImportantViews|flagRetrieveInteractiveWindows"
+    android:canRetrieveWindowContent="true"
+    android:description="@string/service_description"
+    android:notificationTimeout="0" />

@@ -1,0 +1,22 @@
+                  android.widget.FrameLayout id=com.PetraRide_Captain:id/map_view CLICKABLE bounds=0,87,904,2277
+                      android.view.View desc="خرائط Google" CLICKABLE bounds=0,87,904,2277
+                        android.view.View desc="محدّد الخريطة" CLICKABLE bounds=310,917,497,1130
+                    android.widget.TextView id=com.PetraRide_Captain:id/announcements_text text="الاحترافية تظهر في احترام خصوصية العميل، لذلك تجنب الأسئلة أو النقاشات الشخصية أثناء الرحلة." bounds=0,107,904,156
+                    androidx.cardview.widget.CardView id=com.PetraRide_Captain:id/set_destination_card CLICKABLE bounds=46,214,175,340
+                    androidx.cardview.widget.CardView id=com.PetraRide_Captain:id/user_trips_count_card_view CLICKABLE bounds=213,214,497,340
+                        android.widget.TextView text="0.81 د.أ" bounds=340,244,465,309
+                  androidx.cardview.widget.CardView id=com.PetraRide_Captain:id/profile_image_card CLICKABLE bounds=721,214,858,351
+                android.view.ViewGroup id=com.PetraRide_Captain:id/left_buttons_layout desc="سفير بترا رايد" CLICKABLE bounds=0,1181,186,1770
+                  androidx.cardview.widget.CardView id=com.PetraRide_Captain:id/service_selection_card CLICKABLE bounds=38,1181,148,1291
+                    androidx.cardview.widget.CardView id=com.PetraRide_Captain:id/rewards_card CLICKABLE bounds=38,1347,148,1457
+                    android.widget.TextView id=com.PetraRide_Captain:id/rewards_badge text="+1" bounds=131,1329,166,1364
+                  androidx.cardview.widget.CardView id=com.PetraRide_Captain:id/dashboard_card CLICKABLE bounds=38,1512,148,1622
+                  androidx.cardview.widget.CardView id=com.PetraRide_Captain:id/chat_bot_view CLICKABLE bounds=38,1660,148,1770
+                com.google.android.material.floatingactionbutton.FloatingActionButton id=com.PetraRide_Captain:id/traffic_button desc="سفير بترا رايد" CLICKABLE bounds=756,1363,881,1488
+                com.google.android.material.floatingactionbutton.FloatingActionButton id=com.PetraRide_Captain:id/satellite_button desc="سفير بترا رايد" CLICKABLE bounds=756,1514,881,1639
+                                android.widget.TextView id=com.PetraRide_Captain:id/sheet_title text="أنا متاح" bounds=733,1897,866,1980
+                                android.widget.TextView id=com.PetraRide_Captain:id/sheet_message text="قيد البحث عن الطلبات" bounds=611,1980,866,2034
+                                android.widget.Button id=com.PetraRide_Captain:id/bookings_button CLICKABLE bounds=38,1907,154,2023
+                                android.widget.TextView id=com.PetraRide_Captain:id/bookings_badge text="+1" bounds=38,1907,73,1942
+                          android.widget.Button id=com.PetraRide_Captain:id/change_status_button text="انتقل إلى وضع عدم الإتاحة" CLICKABLE bounds=38,2115,866,2245
+                com.google.android.material.floatingactionbutton.FloatingActionButton id=com.PetraRide_Captain:id/current_location_button desc="سفير بترا رايد" CLICKABLE bounds=756,1665,881,1790

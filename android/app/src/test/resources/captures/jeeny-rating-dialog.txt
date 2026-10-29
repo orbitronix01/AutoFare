@@ -1,0 +1,6 @@
+              android.view.View id=me.com.easytaxista:id/touch_outside CLICKABLE bounds=0,0,904,2316
+                    android.widget.TextView id=me.com.easytaxista:id/txtSkip text="تخطي" CLICKABLE bounds=43,1442,134,1508
+                    android.widget.TextView id=me.com.easytaxista:id/txtTime text="الثلاثاء, ٠٥:٢٨ م" bounds=312,1644,593,1706
+                    android.widget.TextView id=me.com.easytaxista:id/txtRatingExperienceLabel text="كيف كانت تجربتك مع Walaa AL-Kadeesi" bounds=43,1720,861,1786
+                    android.widget.EditText id=me.com.easytaxista:id/edtComment text="اترك تعليق" CLICKABLE bounds=43,1994,861,2116
+                    android.widget.Button id=me.com.easytaxista:id/btnRate text="قدم تقييم" CLICKABLE bounds=43,2139,861,2265

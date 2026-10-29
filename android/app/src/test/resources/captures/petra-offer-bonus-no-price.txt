@@ -1,0 +1,11 @@
+                  android.widget.FrameLayout id=com.PetraRide_Captain:id/map_view CLICKABLE bounds=0,87,904,2277
+                      android.view.View desc="خرائط Google" CLICKABLE bounds=0,87,904,2277
+                        android.view.View desc="محدّد الخريطة" CLICKABLE bounds=414,1046,491,1182
+                  android.widget.Button id=com.PetraRide_Captain:id/reject_button text="رفض" CLICKABLE bounds=38,125,269,223
+                android.view.ViewGroup id=com.PetraRide_Captain:id/left_buttons_layout desc="سفير بترا رايد" CLICKABLE hidden bounds=0,1028,0,1028
+                                android.widget.TextView id=com.PetraRide_Captain:id/estimated_time_to_pick_up text="10.22 دقيقة • 5.75 كم" bounds=64,1505,356,1575
+                                    android.widget.TextView text="مكافأة مسافات بعيدة" bounds=64,1589,324,1650
+                                android.widget.TextView text="ملاحظة" bounds=714,1719,811,1778
+                                android.widget.TextView text="$$ Economy +" bounds=596,1778,811,1848
+                                  android.widget.TextView text="شارع أم حريرة, Amman, Jordan" bounds=309,1958,737,2028
+                            android.widget.Button id=com.PetraRide_Captain:id/accept_button text="قبول" CLICKABLE bounds=64,2092,840,2222
