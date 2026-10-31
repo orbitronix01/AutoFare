@@ -1,5 +1,6 @@
 package jo.autofare.ui.stats
 
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -30,14 +31,19 @@ import jo.autofare.ui.requests
 import jo.autofare.ui.theme.FigureLarge
 import jo.autofare.ui.theme.LocalAfColors
 import java.util.Calendar
-import java.util.Locale
+import jo.autofare.ui.arDigits
+import jo.autofare.ui.arFixed
+import jo.autofare.ui.arNum
+import jo.autofare.ui.arPercent
+import jo.autofare.ui.dinars
 
 private fun easeOut(x: Float): Float {
     val c = x.coerceIn(0f, 1f)
     return 1f - (1f - c) * (1f - c) * (1f - c)
 }
 
-private fun jod(v: Double): String = String.format(Locale.US, "%.2f", v)
+/** Dinars to two places, Arabic-Indic: `١٢٫٤٠`. */
+private fun jod(v: Double): String = arFixed(v)
 
 /**
  * Which hours get a bar.
@@ -66,7 +72,7 @@ fun StatsScreen() {
         val weekMs = 7 * 24 * 60 * 60 * 1000L
         StatsData(
             week = h.summary(weekStart),
-            // the week before, so "↑ 18%" is a measurement instead of a decoration
+            // the week before, so "↑ ١٨٪" is a measurement instead of a decoration
             prevWeek = h.summary(weekStart - weekMs, weekStart - 1),
             byHour = h.byHourOfDay(weekStart),
             byApp = h.byApp(weekStart),
@@ -104,15 +110,15 @@ fun StatsScreen() {
         Rule()
         Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
             Kpi(
-                value = data?.week?.accepted?.toString() ?: "—",
-                label = "رحلة مقبولة",
-                delta = data?.week?.let { "من ${requests(it.seen)}" } ?: "",
+                value = data?.week?.accepted?.let { arNum(it) } ?: "—",
+                label = "رحلة قبلناها",
+                delta = data?.week?.let { "من أصل ${requests(it.seen)}" } ?: "",
                 modifier = Modifier.weight(1f),
                 highlight = false,
             )
             VRule()
             Kpi(
-                value = data?.week?.acceptRate?.let { "${(it * 100).toInt()}%" } ?: "—",
+                value = data?.week?.acceptRate?.let { arPercent((it * 100).toInt()) } ?: "—",
                 label = "نسبة القبول",
                 delta = "",
                 modifier = Modifier.weight(1f),
@@ -121,17 +127,17 @@ fun StatsScreen() {
         }
         Rule()
 
-        SectionHeader("01", "الربح حسب الساعة")
+        SectionHeader("01", "ربحك حسب ساعة اليوم")
         HourChart(data?.byHour)
 
         BestHoursCard(data)
 
-        SectionHeader("02", "الأرباح حسب التطبيق")
+        SectionHeader("02", "ربحك من كل تطبيق")
         Column(Modifier.padding(horizontal = 20.dp)) {
             val split = data?.byApp.orEmpty()
             val total = split.values.sum()
             if (total <= 0.0) {
-                EmptyLine("لسا ما قبلنا ولا رحلة هاد الأسبوع.")
+                EmptyLine("لسّا ما قبلنا ولا رحلة هالأسبوع.")
             } else {
                 DETECTED_APPS.forEach { app ->
                     val amount = split[app.packageName] ?: 0.0
@@ -140,33 +146,33 @@ fun StatsScreen() {
             }
         }
 
-        SectionHeader("03", "ليش رفضنا الطلبات")
+        SectionHeader("03", "ليش تركنا طلبات")
         Column(Modifier.padding(horizontal = 20.dp)) {
             val reasons = data?.byReason.orEmpty()
             val total = reasons.values.sum()
             if (total == 0) {
-                EmptyLine("ما رفضنا ولا طلب هاد الأسبوع.")
+                EmptyLine("ما تركنا ولا طلب هالأسبوع.")
             } else {
                 reasons.entries
                     .sortedByDescending { it.value }
                     .take(4)
                     .forEach { (name, count) ->
                         val label = runCatching { Reason.valueOf(name).ar }.getOrDefault(name)
-                        ReasonRow(label, "${(count * 100 / total)}%")
+                        ReasonRow(label, arPercent(count * 100 / total))
                     }
             }
         }
     }
 }
 
-/** "هاد الأسبوع · 18 — 24 تشرين", built from the actual window. */
+/** "آخر ٧ أيام · من ١٨ لـ٢٤ بالشهر", built from the actual window. */
 @Composable
 private fun weekLabel(): String {
     val cal = Calendar.getInstance()
     val endDay = cal.get(Calendar.DAY_OF_MONTH)
     cal.timeInMillis = History.startOfWeek()
     val startDay = cal.get(Calendar.DAY_OF_MONTH)
-    return "آخر ٧ أيام · $startDay — $endDay"
+    return "آخر ${arNum(7)} أيام · من ${arNum(startDay)} لـ${arNum(endDay)} بالشهر"
 }
 
 private fun isUp(now: Double?, before: Double?): Boolean =
@@ -177,9 +183,9 @@ private fun deltaText(now: Double?, before: Double?): String {
     if (now == null || before == null || before <= 0.0) return ""
     val pct = (((now - before) / before) * 100).toInt()
     return when {
-        pct > 0 -> "↑ $pct% عن الأسبوع اللي قبل"
-        pct < 0 -> "↓ ${-pct}% عن الأسبوع اللي قبل"
-        else -> "زي الأسبوع اللي قبل"
+        pct > 0 -> "↑ ${arPercent(pct)} عن الأسبوع الماضي"
+        pct < 0 -> "↓ ${arPercent(-pct)} عن الأسبوع الماضي"
+        else -> "زي الأسبوع الماضي"
     }
 }
 
@@ -249,7 +255,7 @@ private fun HourChart(byHour: Map<Int, Double>?) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                 HOUR_SLOTS.forEach { hour ->
                     Text(
-                        hour.toString(),
+                        arNum(hour),
                         fontSize = 9.5.sp, fontWeight = FontWeight.Bold, color = af.muted,
                         modifier = Modifier.weight(1f),
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -282,7 +288,7 @@ private fun BestHoursCard(data: StatsData?) {
             SpeedLines(af.ink, Modifier.padding(top = 4.dp))
             Spacer(Modifier.width(12.dp))
             Text(
-                "أحسن ساعة إلك هاد الأسبوع ${best.key}:00 — جبت فيها ${jod(best.value)} د.أ.",
+                "أحسن ساعة إلك هالأسبوع كانت الساعة ${arDigits("${best.key}:00")}، طلّعت فيها ${dinars(best.value)}.",
                 fontSize = 12.5.sp, color = af.ink2, lineHeight = 23.sp,
             )
         }

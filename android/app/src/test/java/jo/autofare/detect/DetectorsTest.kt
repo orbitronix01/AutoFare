@@ -39,7 +39,7 @@ class DetectorsTest {
 
         assertEquals(1.58, offer.fare!!, 0.001)
         // `1.13 دقيقة • 210 متر` — one string, two units, and the distance in metres
-        assertEquals(1, offer.etaMin)
+        assertEquals(2, offer.etaMin)  // 1.13 min, rounded up
         assertEquals(0.210, offer.km!!, 0.001)
         assertEquals("Abu Ghosh, Amman, Jordan", offer.dropoff)
     }
@@ -66,7 +66,7 @@ class DetectorsTest {
         val offer = found!!.offer
 
         assertNull(offer.fare)
-        assertEquals(10, offer.etaMin)
+        assertEquals(11, offer.etaMin)  // 10.22 min, rounded up
         assertEquals(5.75, offer.km!!, 0.001)
         assertTrue(offer.usable)
         assertNull("no fare means no rate", offer.perMinute)
@@ -77,7 +77,7 @@ class DetectorsTest {
         // Same ids, a window twice as wide, no reject button in the tree at all.
         val found = PetraDetector.detect(petra("petra-offer-unfolded"))!!
         assertEquals(1.95, found.offer.fare!!, 0.001)
-        assertEquals(4, found.offer.etaMin)
+        assertEquals(5, found.offer.etaMin)  // 4.37 min, rounded up
         assertEquals(1.34, found.offer.km!!, 0.001)
     }
 
@@ -86,7 +86,7 @@ class DetectorsTest {
         // bounds=-418,2092,357,2222 — the right edge is left of the left edge.
         val found = PetraDetector.detect(petra("petra-offer-negative-bounds"))!!
         assertEquals(1.74, found.offer.fare!!, 0.001)
-        assertEquals(2, found.offer.etaMin)
+        assertEquals(3, found.offer.etaMin)  // 2.93 min, rounded up
         assertEquals(1.41, found.offer.km!!, 0.001)
     }
 

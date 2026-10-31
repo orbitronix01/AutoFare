@@ -9,13 +9,15 @@ import java.util.Locale
 /**
  * Where learning-mode captures live.
  *
- * App-private external storage, so no storage permission is needed and the files
- * disappear when the app is uninstalled. Nothing here leaves the phone unless the
- * driver taps share.
+ * Internal storage, not `getExternalFilesDir`: captures hold the full text of
+ * other apps' screens, passenger pickup addresses included, and on Android 9 and
+ * below any app with READ_EXTERNAL_STORAGE — or anyone with a USB cable — can
+ * read the external app folder. Internal storage is readable by this app alone.
+ * Nothing here leaves the phone unless the driver taps share.
  */
 class CaptureStore(context: Context) {
 
-    private val base: File = context.getExternalFilesDir(null) ?: context.filesDir
+    private val base: File = context.filesDir
 
     /** Raw per-screen captures, and nothing else — see [exportDir]. */
     private val dir: File = File(base, "captures").apply { mkdirs() }

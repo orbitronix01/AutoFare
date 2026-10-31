@@ -12,16 +12,16 @@ import jo.autofare.detect.Offer
 
 /** How the fare is judged. Matches the four choices on the rules screen, in order. */
 enum class Mode {
-    /** كل الطلبات — take anything close enough. */
+    /** أي طلب قريب — take anything close enough. */
     EVERYTHING,
 
-    /** من سعر وفوق — a floor on the fare. */
+    /** أجرة أقل شي — a floor on the fare. */
     FLOOR,
 
-    /** بين سعرين — a floor and a ceiling, for refusing long rides too. */
+    /** أجرة بين حدّين — a floor and a ceiling, for refusing long rides too. */
     BAND,
 
-    /** الربح بالدقيقة — dinars per minute of the driver's time. */
+    /** حسب الربح بالدقيقة — dinars per minute of the driver's time. */
     PER_MINUTE,
 }
 
@@ -59,17 +59,19 @@ sealed interface Decision {
  *
  * Carries its own Jordanian-Arabic wording because this is what the driver reads
  * on the intercept overlay a second after it happens, and a decision he cannot
- * read is a decision he cannot trust.
+ * read is a decision he cannot trust. Each one names the thing that failed in
+ * the same words the rules screen uses to set it — "الأجرة", "الزبون بعيد",
+ * "الربح بالدقيقة" — so he can find the knob that made the call.
  */
 enum class Reason(val ar: String) {
     OFF("القبول التلقائي مطفي"),
     UNPAID("ما في اشتراك فعّال"),
-    TOO_CHEAP("تحت الحد"),
-    TOO_EXPENSIVE("فوق الحد"),
+    TOO_CHEAP("الأجرة أقل من حدّك"),
+    TOO_EXPENSIVE("الأجرة أعلى من حدّك"),
     TOO_FAR("الزبون بعيد"),
     LOW_PER_MINUTE("الربح بالدقيقة قليل"),
-    NO_PRICE("ما بيّن السعر"),
-    NO_ETA("ما بيّن وقت الوصول"),
+    NO_PRICE("الطلب ما عليه أجرة"),
+    NO_ETA("ما بيّن قديش الزبون بعيد"),
 }
 
 /**

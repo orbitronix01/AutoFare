@@ -77,13 +77,21 @@ object Numbers {
     /** True when the text names dinars or fils in any spelling. */
     fun hasCurrency(raw: String): Boolean = CURRENCY.containsMatchIn(normalize(raw))
 
-    /** An ETA in whole minutes, summing hours and minutes when both are written out. */
-    fun minutes(raw: String): Int? {
+    /**
+     * An ETA in whole minutes, summing hours and minutes when both are written out.
+     *
+     * Rounded up: Petra writes fractions (`5.72 دقيقة`), and a "6 minutes at most"
+     * rule must turn down 6.2, not read it as 6.
+     */
+    fun minutes(raw: String): Int? = minutesExact(raw)?.let { kotlin.math.ceil(it - 1e-9).toInt() }
+
+    /** The same ETA unrounded, for the per-minute figure: 1.75 min is not 1 or 2. */
+    fun minutesExact(raw: String): Double? {
         val s = normalize(raw)
         val hours = valueFor(s, HOURS)
         val mins = valueFor(s, MINUTES)
         if (hours == null && mins == null) return null
-        return ((hours ?: 0.0) * 60.0 + (mins ?: 0.0)).toInt()
+        return (hours ?: 0.0) * 60.0 + (mins ?: 0.0)
     }
 
     /** A distance in kilometres, accepting a figure written in metres. */
@@ -95,8 +103,8 @@ object Numbers {
     }
 
     /** The whole point of the app: what this ride pays per minute of the driver's time. */
-    fun perMinute(fare: Double, minutes: Int): Double? =
-        if (minutes <= 0) null else fare / minutes
+    fun perMinute(fare: Double, minutes: Double): Double? =
+        if (minutes <= 0.0) null else fare / minutes
 
     /* ───────────────────────── internals ───────────────────────── */
 

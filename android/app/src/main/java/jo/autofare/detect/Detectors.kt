@@ -65,6 +65,7 @@ object PetraDetector : OfferDetector {
             // Absent on bonus rides, where this slot reads `مكافأة مسافات بعيدة`.
             fare = screen.byId(PRICE).firstOrNull()?.text?.let { Numbers.moneyStrict(it) },
             etaMin = etaText?.let { Numbers.minutes(it) },
+            etaExact = etaText?.let { Numbers.minutesExact(it) },
             km = etaText?.let { Numbers.km(it) },
             dropoff = screen.byId(DROP_OFF).firstOrNull()?.text,
         )
@@ -147,6 +148,7 @@ object JeenyDetector : OfferDetector {
 
         var fare: Double? = null
         var etaMin: Int? = null
+        var etaExact: Double? = null
         var km: Double? = null
         var carClass: String? = null
         var surge: String? = null
@@ -159,7 +161,7 @@ object JeenyDetector : OfferDetector {
                     fare = Numbers.moneyStrict(label)
 
                 etaMin == null && Numbers.minutes(label) != null ->
-                    etaMin = Numbers.minutes(label)
+                    etaMin = Numbers.minutes(label).also { etaExact = Numbers.minutesExact(label) }
 
                 km == null && Numbers.km(label) != null ->
                     km = Numbers.km(label)
@@ -177,6 +179,7 @@ object JeenyDetector : OfferDetector {
             pkg = pkg,
             fare = fare,
             etaMin = etaMin,
+            etaExact = etaExact,
             km = km,
             pickup = addresses[0],
             dropoff = addresses[1],

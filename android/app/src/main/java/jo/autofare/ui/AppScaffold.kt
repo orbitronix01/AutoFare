@@ -26,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import jo.autofare.BuildConfig
 import jo.autofare.ui.components.Rule
 import jo.autofare.ui.components.drawGear
 import jo.autofare.ui.home.HomeScreen
@@ -40,6 +41,12 @@ enum class Dest(val label: String) {
     Rules("القواعد"),
     Stats("الإحصائيات"),
     Settings("الإعدادات"),
+
+    /**
+     * Learning mode — screen capture for writing detectors against new offer
+     * layouts. Debug builds only: a driver has no use for it, and it records
+     * other apps' screens. Nothing in a release build navigates here.
+     */
     Learn("وضع التعلّم"),
 }
 
@@ -49,6 +56,8 @@ private val BOTTOM_TABS = listOf(Dest.Home, Dest.Rules, Dest.Stats, Dest.Setting
 fun AppScaffold() {
     val af = LocalAfColors.current
     var dest by rememberSaveable { mutableStateOf(Dest.Home) }
+    // a saved state from a debug install must not land a release build on Learn
+    if (dest == Dest.Learn && !BuildConfig.DEBUG) dest = Dest.Settings
 
     Column(Modifier.fillMaxSize().background(af.paper)) {
         Box(Modifier.weight(1f).fillMaxWidth()) {
@@ -59,8 +68,12 @@ fun AppScaffold() {
                     Dest.Home -> HomeScreen()
                     Dest.Rules -> RulesScreen()
                     Dest.Stats -> StatsScreen()
-                    Dest.Settings -> SettingsScreen(onOpenLearn = { dest = Dest.Learn })
-                    Dest.Learn -> LearnScreen(onBack = { dest = Dest.Settings })
+                    Dest.Settings -> SettingsScreen(
+                        onOpenLearn = if (BuildConfig.DEBUG) ({ dest = Dest.Learn }) else null,
+                    )
+                    Dest.Learn ->
+                        if (BuildConfig.DEBUG) LearnScreen(onBack = { dest = Dest.Settings })
+                        else SettingsScreen()
                 }
             }
         }

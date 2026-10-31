@@ -1,5 +1,6 @@
 package jo.autofare.ui.onboard
 
+import jo.autofare.ui.arDigits
 import android.content.Intent
 import android.provider.Settings
 import androidx.compose.foundation.Canvas
@@ -17,11 +18,9 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import jo.autofare.R
@@ -41,21 +40,21 @@ private data class Step(
 private val STEPS = listOf(
     Step(
         headline = "خلّي AutoFare\nيشوف الطلبات",
-        body = "عشان نقبل بدالك، لازم نشوف الشاشة لما يجيك طلب. اضغط الزر وفعّل AutoFare من قائمة إمكانية الوصول.",
+        body = "عشان نقبل الطلبات عنك، لازم نشوف الطلب لما يطلعلك. اكبس الزر وشغّل AutoFare من «إمكانية الوصول».",
         cta = "افتح الإعدادات",
-        reassurance = "ما منقرأ ولا منخزّن أي إشي خارج تطبيقات الرحلات.",
+        reassurance = "ما منقرأ ولا منخزّن إشي برّا جيني وبترا.",
     ),
     Step(
-        headline = "خلّي التطبيق\nشغّال دايماً",
-        body = "هواوي وشاومي بيسكّروا التطبيقات لحالهم عشان البطارية. لازم تستثني AutoFare، غير هيك بيوقف وإنت بالطريق.",
+        headline = "خلّيه شغّال\nطول الوقت",
+        body = "هواوي وشاومي بسكّروا التطبيقات لحالهم عشان يوفّروا بطارية. طلّع AutoFare من «تحسين البطارية»، غير هيك بوقف وإنت بالطريق.",
         cta = "افتح إعدادات البطارية",
-        reassurance = "هاي أهم خطوة — بدونها التطبيق ما بظل شغّال.",
+        reassurance = "هاي أهم خطوة. بدونها التطبيق ما بضل شغّال.",
     ),
     Step(
         headline = "حدّد\nقواعدك",
-        body = "قلّنا شو الطلب اللي بدك إياه — السعر، وقت الوصول، ولا الربح بالدقيقة. وإحنا منقرّر بدالك بأقل من ثانية.",
-        cta = "يلا نبلّش",
-        reassurance = "بتقدر تغيّرها بأي وقت من شاشة القواعد.",
+        body = "قلّنا شو الطلب اللي بدك إياه: الأجرة، وقديش بعيد الزبون. وإحنا منقرّر عنك بأقل من ثانية.",
+        cta = "يلّا نبلّش",
+        reassurance = "بتقدر تغيّرها بأي وقت من «القواعد».",
     ),
 )
 
@@ -94,14 +93,13 @@ fun OnboardingScreen(onDone: () -> Unit) {
 
         Spacer(Modifier.height(34.dp))
 
-        // Forced LTR: in an RTL layout "01 / 03" otherwise renders as "03 / 01".
-        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-            Text(
-                "0${index + 1} / 0${STEPS.size}",
-                fontWeight = FontWeight.Black, fontSize = 13.sp,
-                letterSpacing = 1.sp, color = af.muted,
-            )
-        }
+        // Arabic-Indic and right-to-left, like the text around it: "٠١ / ٠٣" reads
+        // from the right, step first. (It used to be forced LTR for Latin digits.)
+        Text(
+            arDigits("0${index + 1} / 0${STEPS.size}"),
+            fontWeight = FontWeight.Black, fontSize = 13.sp,
+            letterSpacing = 1.sp, color = af.muted,
+        )
 
         Spacer(Modifier.height(12.dp))
 

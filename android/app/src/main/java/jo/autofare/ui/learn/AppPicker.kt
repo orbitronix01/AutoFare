@@ -1,5 +1,6 @@
 package jo.autofare.ui.learn
 
+import jo.autofare.ui.arNum
 import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.Image
@@ -141,7 +142,7 @@ fun AppPickerScreen(
         if (picked.isNotEmpty()) {
             Rule()
             Hint(
-                "متسجّل ${picked.size} تطبيق. افتح وضع التعلّم واشتغل شوي.",
+                "متسجّل ${arNum(picked.size)} تطبيق. افتح وضع التعلّم واشتغل شوي.",
                 Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
             )
         }

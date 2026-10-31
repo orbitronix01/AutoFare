@@ -40,6 +40,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import jo.autofare.ui.arDigits
 import jo.autofare.ui.theme.*
 import kotlin.math.PI
 import kotlin.math.cos
@@ -58,7 +59,7 @@ fun VRule() {
     VerticalDivider(Modifier.fillMaxHeight(), color = LocalAfColors.current.rule)
 }
 
-/** Numbered section marker: `01 ─── التطبيقات ──────────` */
+/** Numbered section marker: `٠١ ─── التطبيقات ──────────`. Callers pass Latin "01"; it is shown in Arabic-Indic digits. */
 @Composable
 fun SectionHeader(index: String, label: String, modifier: Modifier = Modifier) {
     val af = LocalAfColors.current
@@ -69,7 +70,7 @@ fun SectionHeader(index: String, label: String, modifier: Modifier = Modifier) {
             .padding(top = 30.dp, bottom = 13.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(index, style = SectionIndex, color = af.muted)
+        Text(arDigits(index), style = SectionIndex, color = af.muted)
         Spacer(Modifier.width(11.dp))
         Text(label, style = SectionLabel, color = af.muted)
         Spacer(Modifier.width(11.dp))
@@ -394,7 +395,8 @@ fun Stepper(
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(value, style = FigureMedium.copy(fontSize = 22.sp), color = af.ink)
+                    // the value arrives as a figure; shown in Arabic-Indic digits like every number
+                    Text(arDigits(value), style = FigureMedium.copy(fontSize = 22.sp), color = af.ink)
                     Spacer(Modifier.width(7.dp))
                     Text(unit, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold, color = af.muted)
                 }

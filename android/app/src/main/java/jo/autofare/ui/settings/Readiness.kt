@@ -13,6 +13,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import jo.autofare.service.AutoFareService
@@ -33,8 +34,13 @@ data class Readiness(
     val battery: Boolean,
     /** Draw-over-other-apps, for the floating button. */
     val overlay: Boolean,
+    /**
+     * Notifications, for the status line and the "losing rides" alarm. Android 13
+     * and up blocks them until the driver allows it, and nothing else asks.
+     */
+    val notifications: Boolean = true,
 ) {
-    /** Only the first one stops the app working; the other two degrade it. */
+    /** Only the first one stops the app working; the others degrade it. */
     val blocking: Boolean get() = !accessibility
 }
 
@@ -44,6 +50,7 @@ fun readReadiness(context: Context): Readiness {
         accessibility = AutoFareService.isEnabled(context),
         battery = power?.isIgnoringBatteryOptimizations(context.packageName) ?: false,
         overlay = Settings.canDrawOverlays(context),
+        notifications = NotificationManagerCompat.from(context).areNotificationsEnabled(),
     )
 }
 
@@ -85,6 +92,15 @@ fun openAccessibilitySettings(context: Context) =
  */
 fun openBatterySettings(context: Context) {
     val ok = context.safeStart(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+    if (!ok) context.safeStart(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+        data = Uri.fromParts("package", context.packageName, null)
+    })
+}
+
+/** The app's own notification screen: one switch, the same on every Android we support. */
+fun openNotificationSettings(context: Context) {
+    val ok = context.safeStart(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+        .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName))
     if (!ok) context.safeStart(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
         data = Uri.fromParts("package", context.packageName, null)
     })

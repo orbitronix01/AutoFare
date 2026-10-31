@@ -70,6 +70,70 @@ class AppPrefs(context: Context) {
         captureEpoch = captureEpoch + 1
     }
 
+    /* ─────────────── while he is inside the ride app ─────────────── */
+
+    /**
+     * The floating button over the ride app. On by default, matching the design:
+     * it only ever appears once the driver has also granted draw-over-apps, so the
+     * default costs nothing on a phone where he has not.
+     */
+    var floatingButton: Boolean
+        get() = sp.getBoolean(KEY_BUBBLE, true)
+        set(v) = sp.edit().putBoolean(KEY_BUBBLE, v).apply()
+
+    /** A short tone when AutoFare takes a ride for him. */
+    var acceptSound: Boolean
+        get() = sp.getBoolean(KEY_SOUND, true)
+        set(v) = sp.edit().putBoolean(KEY_SOUND, v).apply()
+
+    /**
+     * A short buzz when an offer came in and the rules let it go.
+     *
+     * Off by default: a phone buzzing on every refused offer at a busy junction
+     * is the kind of noise a driver should opt into, not discover.
+     */
+    var rejectVibrate: Boolean
+        get() = sp.getBoolean(KEY_VIBRATE, false)
+        set(v) = sp.edit().putBoolean(KEY_VIBRATE, v).apply()
+
+    /**
+     * Where he last dropped the floating button, in screen pixels, or null for
+     * "never moved". Display placement only — nothing decides anything by it.
+     */
+    var bubblePosition: Pair<Int, Int>?
+        get() {
+            if (!sp.contains(KEY_BUBBLE_X)) return null
+            return sp.getInt(KEY_BUBBLE_X, 0) to sp.getInt(KEY_BUBBLE_Y, 0)
+        }
+        set(v) {
+            val e = sp.edit()
+            if (v == null) e.remove(KEY_BUBBLE_X).remove(KEY_BUBBLE_Y)
+            else e.putInt(KEY_BUBBLE_X, v.first).putInt(KEY_BUBBLE_Y, v.second)
+            e.apply()
+        }
+
+    /**
+     * The apps that were armed when he paused everything from the floating
+     * button, so the next tap brings back exactly those — see `BubbleToggle`.
+     */
+    var pausedApps: Set<String>
+        get() = sp.getStringSet(KEY_PAUSED, null)?.toSet() ?: emptySet()
+        set(v) = sp.edit().putStringSet(KEY_PAUSED, v).apply()
+
+    /**
+     * Same contract as `RulesStore.observe`: hold the listener, because
+     * SharedPreferences only keeps a weak reference to it.
+     */
+    fun observe(onChange: (key: String?) -> Unit): SharedPreferences.OnSharedPreferenceChangeListener {
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key -> onChange(key) }
+        sp.registerOnSharedPreferenceChangeListener(listener)
+        return listener
+    }
+
+    fun stopObserving(listener: SharedPreferences.OnSharedPreferenceChangeListener) {
+        sp.unregisterOnSharedPreferenceChangeListener(listener)
+    }
+
     private companion object {
         const val KEY_ONBOARDED = "onboarded"
         const val KEY_FOLLOW_SYSTEM = "follow_system_theme"
@@ -78,5 +142,11 @@ class AppPrefs(context: Context) {
         const val KEY_CAPTURE_ALL = "capture_all_apps"
         const val KEY_PICKED = "picked_packages"
         const val KEY_EPOCH = "capture_epoch"
+        const val KEY_BUBBLE = "floating_button"
+        const val KEY_SOUND = "accept_sound"
+        const val KEY_VIBRATE = "reject_vibrate"
+        const val KEY_BUBBLE_X = "bubble_x"
+        const val KEY_BUBBLE_Y = "bubble_y"
+        const val KEY_PAUSED = "bubble_paused_apps"
     }
 }

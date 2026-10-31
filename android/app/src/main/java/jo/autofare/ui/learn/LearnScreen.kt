@@ -1,5 +1,6 @@
 package jo.autofare.ui.learn
 
+import jo.autofare.ui.arNum
 import android.content.Intent
 import android.os.Build
 import android.provider.Settings
@@ -204,7 +205,7 @@ fun LearnScreen(onBack: () -> Unit) {
             Modifier.fillMaxWidth().padding(18.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text("$count", style = FigureLarge, color = af.ink)
+            Text(arNum(count), style = FigureLarge, color = af.ink)
             Spacer(Modifier.height(6.dp))
             Text("شاشة متسجّلة", fontSize = 12.5.sp, color = af.muted)
 
@@ -218,7 +219,7 @@ fun LearnScreen(onBack: () -> Unit) {
             if (kept > 0) {
                 Spacer(Modifier.height(10.dp))
                 Text(
-                    "منها $kept شاشة مهمة",
+                    "منها ${arNum(kept)} شاشة مهمة",
                     fontSize = 12.5.sp, fontWeight = FontWeight.Bold, color = af.accept,
                 )
             }
@@ -237,7 +238,7 @@ fun LearnScreen(onBack: () -> Unit) {
                             modifier = Modifier.weight(1f),
                         )
                         Text(
-                            "${perAppKept[pkg] ?: 0} / $n",
+                            "${arNum(perAppKept[pkg] ?: 0)} / ${arNum(n)}",
                             fontSize = 12.sp, color = af.muted,
                         )
                     }

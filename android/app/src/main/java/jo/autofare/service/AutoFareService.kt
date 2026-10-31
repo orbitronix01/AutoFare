@@ -1,17 +1,24 @@
 package jo.autofare.service
 
 import android.accessibilityservice.AccessibilityService
+import android.app.AppOpsManager
 import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import android.view.accessibility.AccessibilityWindowInfo
+import jo.autofare.MainActivity
 import jo.autofare.auto.AutoAccept
+import jo.autofare.auto.cueFor
 import jo.autofare.auto.DecisionLog
 import jo.autofare.data.AppPrefs
 import jo.autofare.data.CaptureStore
+import jo.autofare.data.DETECTED_APPS
 import jo.autofare.data.History
 import jo.autofare.data.License
 import jo.autofare.data.LicenseStore
@@ -22,6 +29,11 @@ import jo.autofare.detect.OfferHints
 import jo.autofare.rules.Decision
 import jo.autofare.rules.Reason
 import jo.autofare.rules.RuleSet
+import jo.autofare.service.overlay.AcceptMoment
+import jo.autofare.service.overlay.BubbleTap
+import jo.autofare.service.overlay.FloatingButton
+import jo.autofare.service.overlay.bubbleTap
+import jo.autofare.service.overlay.momentCard
 import java.util.Date
 
 /**
@@ -37,9 +49,11 @@ import java.util.Date
  * rationed and happy to be late. Nothing is uploaded; captures sit in the app's
  * own folder until the driver chooses to share them.
  *
- * It stays in the build. The detectors read Jeeny's offer by its wording, and the
- * day Jeeny rewords a label the only way to find out what it says now is to ask
- * the driver for another capture.
+ * It stays in the source, but only debug builds run it. The detectors read
+ * Jeeny's offer by its wording, and the day Jeeny rewords a label the only way
+ * to find out what it says now is a fresh capture — taken on a debug build on a
+ * test phone. A release build has no way in (the screen is not reachable), no
+ * notification, and never records: see [captureAllowed].
  *
  * ## Why the learning half is shaped the way it is
  *
@@ -89,13 +103,29 @@ class AutoFareService : AccessibilityService() {
     @Volatile private var armed = false
 
     /**
-     * When the subscription runs out, cached from disk.
+     * The `elapsedRealtime` instant until which the engine may press, cached from disk.
      *
-     * Held as the instant rather than a boolean so an expiry that passes mid-shift
-     * takes effect on the next offer without anything having to re-read it — the
-     * accept path compares two longs and never touches SharedPreferences.
+     * Held as the instant rather than a boolean so the last server answer going
+     * stale mid-shift takes effect on the next offer without anything having to
+     * re-read it — the accept path compares two longs and never touches
+     * SharedPreferences or the network.
      */
     @Volatile private var paidUntil = 0L
+
+    /** Checks in with the server every [License.CHECK_MS], off the accept path entirely. */
+    private val timer = Handler(Looper.getMainLooper())
+    private val licenseTick = object : Runnable {
+        override fun run() {
+            // re-derive first: a missed check-in has to lock on time even when
+            // there is no network to bring an answer back
+            loadLicense()
+            showStatus()
+            // also the fallback for an overlay grant the op watcher did not report
+            refreshBubble()
+            License.checkAsync(this@AutoFareService)
+            timer.postDelayed(this, License.CHECK_MS)
+        }
+    }
 
     /**
      * Today's tally for the shade line, kept in memory.
@@ -113,6 +143,24 @@ class AutoFareService : AccessibilityService() {
 
     private var rulesListener: SharedPreferences.OnSharedPreferenceChangeListener? = null
     private var licenseListener: SharedPreferences.OnSharedPreferenceChangeListener? = null
+    private var prefsListener: SharedPreferences.OnSharedPreferenceChangeListener? = null
+    private var overlayOpListener: AppOpsManager.OnOpChangedListener? = null
+
+    /** AutoFare's own screen came up or went away: the bubble hides over it. Main thread. */
+    private val appVisibilityListener: () -> Unit = { refreshBubble() }
+
+    /*
+     * What happens around a press, never in front of it: the tone and buzz, the
+     * floating button, the accept-moment card. Their settings are held in memory
+     * for the same reason the rules are — the decision callback runs inside the
+     * accept path's call stack, and it does not get to read a file either.
+     */
+    private lateinit var feedback: Feedback
+    private lateinit var bubble: FloatingButton
+    private lateinit var moment: AcceptMoment
+    @Volatile private var acceptSound = false
+    @Volatile private var rejectVibrate = false
+    @Volatile private var bubbleOn = false
 
     /** What we know about one on-screen layout, keyed by its shape. */
     private class Shape {
@@ -150,34 +198,59 @@ class AutoFareService : AccessibilityService() {
                 history.record(outcome, at)
                 onDecision(outcome, at)
             },
-            paid = { System.currentTimeMillis() < paidUntil },
+            paid = { SystemClock.elapsedRealtime() < paidUntil },
         )
         loadRules()
         loadLicense()
         seedTodayTally()
+        feedback = Feedback(this)
+        bubble = FloatingButton(this, prefs, onTap = ::onBubbleTap)
+        moment = AcceptMoment(this, prefs)
+        loadOverlaySettings()
+
         rulesListener = rulesStore.observe {
             loadRules()
             // a rule change makes every earlier decision irrelevant
             auto.reset()
             showStatus()
+            refreshBubble()
         }
         licenseListener = licenseStore.observe {
             loadLicense()
             showStatus()
+            refreshBubble()
         }
+        prefsListener = prefs.observe {
+            loadOverlaySettings()
+            refreshBubble()
+        }
+        watchOverlayPermission()
+        AppVisibility.observe(appVisibilityListener)
         showStatus()
+        refreshBubble()
+        timer.post(licenseTick)
 
         running = true
         epoch = prefs.captureEpoch
-        learningWasOn = prefs.learningEnabled
+        learningWasOn = captureAllowed && prefs.learningEnabled
         if (learningWasOn) notifier.show(store.count(), store.keepCount())
         android.util.Log.i(TAG, "connected · armed=$armed learning=$learningWasOn")
     }
 
     override fun onDestroy() {
         running = false
+        timer.removeCallbacks(licenseTick)
         rulesListener?.let { rulesStore.stopObserving(it) }
         licenseListener?.let { licenseStore.stopObserving(it) }
+        prefsListener?.let { prefs.stopObserving(it) }
+        overlayOpListener?.let { l ->
+            runCatching { getSystemService(AppOpsManager::class.java)?.stopWatchingMode(l) }
+        }
+        // nothing of ours may outlive the service on top of the ride app
+        AppVisibility.stopObserving(appVisibilityListener)
+        if (::bubble.isInitialized) bubble.hide()
+        if (::moment.isInitialized) moment.hide()
+        if (::feedback.isInitialized) feedback.release()
         if (::notifier.isInitialized) notifier.hide()
         // the line vanishing is the driver's signal that we were killed, but on an
         // orderly shutdown clear it ourselves rather than leave a lie in the shade
@@ -200,17 +273,80 @@ class AutoFareService : AccessibilityService() {
         armed = loaded.values.any { it.enabled }
     }
 
-    /**
-     * Cache the expiry off disk.
-     *
-     * A refusal counts as no subscription: the server has positively said this key
-     * is not good, and honouring the stored expiry anyway would make revoking a
-     * shared key pointless.
-     */
+    /** Cache the press deadline off disk. See [LicenseStore.paidUntilElapsed]. */
     private fun loadLicense() {
-        paidUntil = when (License.state(licenseStore)) {
-            is License.State.Active -> licenseStore.expiresAt
-            else -> 0L
+        paidUntil = licenseStore.paidUntilElapsed()
+    }
+
+    /** Cache the around-the-press settings off disk, for the same reason as [loadRules]. */
+    private fun loadOverlaySettings() {
+        acceptSound = prefs.acceptSound
+        rejectVibrate = prefs.rejectVibrate
+        bubbleOn = prefs.floatingButton
+    }
+
+    /**
+     * The floating button, shown only while it can mean something.
+     *
+     * Not on a locked app: the licence gate is what decides whether AutoFare
+     * works at all, and a bubble offering to switch on something that will
+     * refuse every offer is a control that lies. The shade alert is what speaks
+     * to a lapsed driver. Main thread only.
+     */
+    private fun refreshBubble() {
+        if (!::bubble.isInitialized) return
+        val paid = SystemClock.elapsedRealtime() < paidUntil
+        // and not over AutoFare itself, where it sat on top of every screen's title
+        // and offered a switch the screen underneath already shows
+        bubble.update(visible = bubbleOn && paid && !AppVisibility.inForeground, armed = canAccept())
+    }
+
+    /**
+     * Notice the driver granting or revoking draw-over-apps while we run.
+     *
+     * There is no broadcast for it; the op watcher is the only signal, and it can
+     * arrive on a binder thread a moment before `canDrawOverlays` agrees, so the
+     * refresh is posted to the main thread with a short delay. [licenseTick]
+     * re-checks as well, for the vendor builds that never call this.
+     */
+    private fun watchOverlayPermission() {
+        runCatching {
+            val ops = getSystemService(AppOpsManager::class.java) ?: return
+            val listener = AppOpsManager.OnOpChangedListener { _, _ ->
+                timer.postDelayed({ refreshBubble() }, 300L)
+            }
+            ops.startWatchingMode(AppOpsManager.OPSTR_SYSTEM_ALERT_WINDOW, packageName, listener)
+            overlayOpListener = listener
+        }
+    }
+
+    /**
+     * One tap on the floating button. What it means is decided in [bubbleTap];
+     * this only carries it out. A tap is the driver, not an offer, so writing
+     * the rules from here is no cost to the accept path — and the write comes
+     * straight back through [rulesListener], which re-arms the engine exactly as
+     * a switch on Home would.
+     */
+    private fun onBubbleTap() {
+        val ids = DETECTED_APPS.map { it.id }.toSet()
+        val armedNow = DETECTED_APPS.filter { rulesStore.get(it.id).enabled }.map { it.id }.toSet()
+        val tap = bubbleTap(armedNow, ids, prefs.pausedApps)
+        android.util.Log.i(TAG, "bubble tap · armed=$armedNow · $tap")
+        when (tap) {
+            is BubbleTap.Apply -> {
+                prefs.pausedApps = tap.remember
+                for (app in DETECTED_APPS) {
+                    val r = rulesStore.get(app.id)
+                    val on = app.id in tap.armed
+                    if (r.enabled != on) rulesStore.put(app.id, r.copy(enabled = on))
+                }
+            }
+            BubbleTap.OpenApp -> runCatching {
+                startActivity(
+                    Intent(this, MainActivity::class.java)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP),
+                )
+            }.onFailure { android.util.Log.w(TAG, "could not open the app from the bubble", it) }
         }
     }
 
@@ -230,7 +366,7 @@ class AutoFareService : AccessibilityService() {
      * running and switched off at once, so [armed] and the subscription are all
      * that is left to check here.
      */
-    private fun canAccept(): Boolean = armed && System.currentTimeMillis() < paidUntil
+    private fun canAccept(): Boolean = armed && SystemClock.elapsedRealtime() < paidUntil
 
     private fun showStatus() {
         if (::accepts.isInitialized) {
@@ -245,10 +381,24 @@ class AutoFareService : AccessibilityService() {
      * any of it can reach him.
      */
     private fun onDecision(outcome: AutoAccept.Outcome, at: Long) {
+        /*
+         * The press has already happened by the time this runs; even so, the cue
+         * is only handed to its own thread here, and the card is posted to the
+         * back of the main queue. Neither runs inside the event that carried the
+         * offer, so neither can be the reason a press was late.
+         */
+        cueFor(outcome, acceptSound, rejectVibrate)?.let { feedback.play(it) }
+
         if (outcome.pressed) {
             acceptedToday++
             earningsToday += outcome.offer.fare ?: 0.0
             showStatus()
+            val offer = outcome.offer
+            val tookMs = outcome.tookMs
+            timer.post {
+                val name = SUPPORTED.firstOrNull { it.packageName == offer.pkg }?.name ?: offer.pkg
+                moment.show(momentCard(offer, rules[offer.pkg], name, tookMs))
+            }
             return
         }
 
@@ -280,7 +430,8 @@ class AutoFareService : AccessibilityService() {
          */
         tryAccept(event)
 
-        if (!prefs.learningEnabled) {
+        // always false in release, so nothing below ever runs on a driver's phone
+        if (!captureAllowed || !prefs.learningEnabled) {
             if (learningWasOn) {
                 learningWasOn = false
                 notifier.hide()
@@ -594,6 +745,13 @@ class AutoFareService : AccessibilityService() {
 
     companion object {
         private const val TAG = "AutoFareSvc"
+
+        /**
+         * Learning mode exists only in debug builds. In a release build this is
+         * false for the life of the process, so the capture branch never runs and a
+         * `learning_enabled` left over in prefs from a debug install does nothing.
+         */
+        private val captureAllowed: Boolean = jo.autofare.BuildConfig.DEBUG
 
         /** Don't walk the tree more than this often on content changes. */
         private const val WALK_FLOOR_MS = 250L

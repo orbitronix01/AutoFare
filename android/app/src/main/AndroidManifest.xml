@@ -2,9 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!--
-        Lets the driver pick his own ride app off a list, which is how we learn the
-        real package names instead of guessing them. Scoped to launchable apps only,
-        so this needs no QUERY_ALL_PACKAGES.
+        Used only by learning mode's app picker, which exists in debug builds only.
+        Scoped to launchable apps, so this needs no QUERY_ALL_PACKAGES.
     -->
     <queries>
         <intent>
@@ -14,11 +13,19 @@
     </queries>
 
     <!--
-        Only for the ongoing "learning mode is running" line in the shade, so a driver
-        can see mid-shift that it is still alive and still counting. Capture works
-        whether or not he grants it.
+        For the ongoing "auto-accept is on" line in the shade and the "cannot accept"
+        alert. Accepting works whether or not he grants it.
     -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!--
+        The short buzz when an offer is let go (Settings → اهتزاز عند الرفض), and
+        draw-over-apps for the floating button and the accept-moment card. Neither is
+        needed to accept rides: without them the buzz is silent and the overlays
+        simply never appear.
+    -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
     <!--
         Only ever used to check the subscription. No ride, fare or location data
@@ -30,6 +37,8 @@
 
     <application
         android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
@@ -46,7 +55,7 @@
             </intent-filter>
         </activity>
 
-        <!-- Learning mode: reads what ride apps put on screen. Accepts nothing yet. -->
+        <!-- Reads the ride app's offer and presses accept. See AutoFareService. -->
         <service
             android:name=".service.AutoFareService"
             android:exported="false"

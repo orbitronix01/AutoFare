@@ -24,13 +24,15 @@ data class Offer(
     val carClass: String? = null,
     /** Jeeny's surge badge, e.g. `1.1x`. Informational — the fare already includes it. */
     val surge: String? = null,
+    /** [etaMin] before rounding up, when the screen gave a fraction. */
+    val etaExact: Double? = null,
 ) {
 
     /** What this ride pays for a minute of the driver's time, the whole point of the app. */
     val perMinute: Double?
         get() {
             val f = fare ?: return null
-            val m = etaMin ?: return null
+            val m = etaExact ?: etaMin?.toDouble() ?: return null
             return Numbers.perMinute(f, m)
         }
 

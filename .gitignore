@@ -15,3 +15,9 @@ local.properties
 # OS
 Thumbs.db
 desktop.ini
+
+# macOS
+.DS_Store
+
+# Supabase CLI state
+supabase/.temp/

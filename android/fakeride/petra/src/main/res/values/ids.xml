@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The view ids PetraDetector looks up, copied from the captured Petra Ride screens.
+  They live in this module's namespace, com.PetraRide_Captain, which is what makes
+  them surface as com.PetraRide_Captain:id/accept_button and so on.
+-->
+<resources>
+    <item name="map_view" type="id" />
+    <item name="reject_button" type="id" />
+    <item name="left_buttons_layout" type="id" />
+    <item name="estimated_trip_price" type="id" />
+    <item name="estimated_time_to_pick_up" type="id" />
+    <item name="drop_off_location_title_label" type="id" />
+    <item name="accept_button" type="id" />
+</resources>

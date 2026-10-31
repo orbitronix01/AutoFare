@@ -1,5 +1,7 @@
 package jo.autofare.service
 
+import jo.autofare.ui.arNum
+import jo.autofare.ui.dinars
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -9,7 +11,6 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import jo.autofare.MainActivity
 import jo.autofare.R
-import java.util.Locale
 
 /**
  * What auto-accept is doing, in the shade.
@@ -45,7 +46,7 @@ class AcceptNotifier(private val context: Context) {
             // and a chime per ride in a moving car is an app he turns off
             NotificationManager.IMPORTANCE_LOW,
         ).apply {
-            description = "يبيّن إنه القبول التلقائي شغّال وكم رحلة قبلنا اليوم"
+            description = "بتبيّن إذا القبول التلقائي شغّال وكم رحلة قبلنا اليوم"
             setShowBadge(false)
         }
         val alert = NotificationChannel(
@@ -55,7 +56,7 @@ class AcceptNotifier(private val context: Context) {
             // stopped being able to earn him anything
             NotificationManager.IMPORTANCE_HIGH,
         ).apply {
-            description = "بينبّهك لما يصير إشي بيمنع القبول التلقائي"
+            description = "بتنبّهك إذا في إشي مانع القبول التلقائي"
         }
         context.getSystemService(NotificationManager::class.java)?.let {
             it.createNotificationChannel(status)
@@ -86,10 +87,10 @@ class AcceptNotifier(private val context: Context) {
                 else "AutoFare — القبول التلقائي مطفي"
             val body =
                 if (acceptedToday == 0) {
-                    if (armed) "لساته ما إجا ولا طلب"
-                    else "شغّله من التطبيق عشان نبلّش"
+                    if (armed) "لسّا ما إجا ولا طلب"
+                    else "افتح AutoFare وشغّل جيني أو بترا"
                 } else {
-                    "اليوم: $acceptedToday ${rides(acceptedToday)} · ${jod(earningsToday)} د.أ"
+                    "اليوم: ${arNum(acceptedToday)} ${rides(acceptedToday)} · ${dinars(earningsToday)}"
                 }
 
             val note = NotificationCompat.Builder(context, STATUS_CHANNEL)
@@ -117,9 +118,9 @@ class AcceptNotifier(private val context: Context) {
             ensureChannels()
             val note = NotificationCompat.Builder(context, ALERT_CHANNEL)
                 .setSmallIcon(R.mipmap.ic_launcher)
-                .setContentTitle("AutoFare ما قبل الطلب")
+                .setContentTitle("ما قدرنا نقبل الطلب")
                 .setContentText(reason)
-                .setStyle(NotificationCompat.BigTextStyle().bigText("$reason — افتح التطبيق وصلّحها، إنت هلأ بتضيّع طلبات."))
+                .setStyle(NotificationCompat.BigTextStyle().bigText("$reason. افتح AutoFare وصلّحها، هلّق عم تروح عليك طلبات."))
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setCategory(NotificationCompat.CATEGORY_ERROR)
                 .setAutoCancel(true)
@@ -136,15 +137,13 @@ class AcceptNotifier(private val context: Context) {
         }
     }
 
-    /** "رحلة" / "رحلتين" / "رحلات" — the numeral is already printed before this. */
+    /** "رحلة" / "رحلتين" / "رحلات" — the numeral (Arabic-Indic, via [arNum]) is already printed before this. */
     private fun rides(n: Int): String = when {
         n == 1 -> "رحلة"
         n == 2 -> "رحلتين"
         n % 100 in 3..10 -> "رحلات"
         else -> "رحلة"
     }
-
-    private fun jod(v: Double): String = String.format(Locale.US, "%.2f", v)
 
     private companion object {
         const val STATUS_CHANNEL = "auto_accept"

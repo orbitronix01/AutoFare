@@ -26,18 +26,13 @@ private val Plex = FontFamily(
     Font(R.font.ibm_plex_sans_arabic_bold, FontWeight.Bold),
 )
 
-/**
- * Figures only. Archivo ships as a variable font; Compose derives each weight
- * from the `wght` axis automatically, which needs API 26 — the app's minSdk.
+/*
+ * Archivo (res/font/archivo_variable.ttf) used to set the figures, back when they
+ * were Latin. It has no Arabic-Indic glyphs, so now that every figure is printed
+ * in ٠١٢٣٤٥٦٧٨٩ (see ui/ArabicText.kt) the figure styles below use Plex, which
+ * does. Plex stops at Bold, so the Black and ExtraBold figures become Bold, its
+ * heaviest cut; sizes are unchanged so the hierarchy holds.
  */
-private val Archivo = FontFamily(
-    Font(R.font.archivo_variable, FontWeight.Normal),
-    Font(R.font.archivo_variable, FontWeight.Medium),
-    Font(R.font.archivo_variable, FontWeight.SemiBold),
-    Font(R.font.archivo_variable, FontWeight.Bold),
-    Font(R.font.archivo_variable, FontWeight.ExtraBold),
-    Font(R.font.archivo_variable, FontWeight.Black),
-)
 
 /*
  * Tracking rule, and the reason the Arabic looked broken as much as it looked wrong:
@@ -45,36 +40,37 @@ private val Archivo = FontFamily(
  * Arabic is cursive — letters join. Any letterSpacing, negative OR positive, is
  * inserted between glyphs and pulls those joins apart, so a tracked Arabic string
  * reads as disconnected shapes. Every style below that can carry Arabic is set to
- * zero tracking. Tight negative tracking survives only on the figure styles, which
- * render Western digits in Archivo and never Arabic.
+ * zero tracking. Tight negative tracking survives only on the figure styles:
+ * Arabic-Indic digits do not join, so they take it fine. A figure style that has
+ * to carry Arabic words (e.g. "مدى الحياة") must reset letterSpacing to zero.
  */
 
-/** Figures: tight tracking, heavy weight — numbers are the main visual element. */
+/** Figures: heavy weight, no tracking — numbers are the main visual element. Negative tracking made Arabic-Indic figures mis-measure and wrap. */
 val FigureHuge = TextStyle(
-    fontFamily = Archivo,
-    fontWeight = FontWeight.Black,
+    fontFamily = Plex,
+    fontWeight = FontWeight.Bold,
     fontSize = 62.sp,
-    letterSpacing = (-3).sp,
+    letterSpacing = 0.sp,
 )
 
 val FigureLarge = TextStyle(
-    fontFamily = Archivo,
-    fontWeight = FontWeight.Black,
+    fontFamily = Plex,
+    fontWeight = FontWeight.Bold,
     fontSize = 30.sp,
-    letterSpacing = (-1.2).sp,
+    letterSpacing = 0.sp,
 )
 
 val FigureMedium = TextStyle(
-    fontFamily = Archivo,
-    fontWeight = FontWeight.ExtraBold,
+    fontFamily = Plex,
+    fontWeight = FontWeight.Bold,
     fontSize = 21.sp,
-    letterSpacing = (-0.5).sp,
+    letterSpacing = 0.sp,
 )
 
-/** Numbered section markers: 01 / 02 / 03 — Latin digits, so Archivo. */
+/** Numbered section markers: ٠١ / ٠٢ / ٠٣ — Arabic-Indic digits, so Plex. */
 val SectionIndex = TextStyle(
-    fontFamily = Archivo,
-    fontWeight = FontWeight.ExtraBold,
+    fontFamily = Plex,
+    fontWeight = FontWeight.Bold,
     fontSize = 10.5.sp,
     letterSpacing = 0.4.sp,
 )

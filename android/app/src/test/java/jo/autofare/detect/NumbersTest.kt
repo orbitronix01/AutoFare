@@ -154,8 +154,8 @@ class NumbersTest {
 
     @Test
     fun `profit per minute`() {
-        assertEquals(0.3, Numbers.perMinute(4.5, 15)!!, d)
-        assertNull(Numbers.perMinute(4.5, 0))
+        assertEquals(0.3, Numbers.perMinute(4.5, 15.0)!!, d)
+        assertNull(Numbers.perMinute(4.5, 0.0))
     }
 
     /** End to end: an offer line in Arabic becomes a decision. */
@@ -166,7 +166,18 @@ class NumbersTest {
         val eta = Numbers.minutes(offer)!!
         assertEquals(6.0, fare, d)
         assertEquals(10, eta)
-        assertEquals(0.6, Numbers.perMinute(fare, eta)!!, d)
+        assertEquals(0.6, Numbers.perMinute(fare, eta.toDouble())!!, d)
         assertEquals(4.2, Numbers.km(offer)!!, d)
+    }
+
+    /** Petra's fractional minutes, from a real capture on 28 Oct 2026. */
+    @Test
+    fun `fractional minutes round up and keep the exact figure`() {
+        assertEquals(6, Numbers.minutes("5.72 دقيقة"))
+        assertEquals(2, Numbers.minutes("1.75 دقيقة"))
+        assertEquals(5, Numbers.minutes("5 دقائق"))
+        assertEquals(1.75, Numbers.minutesExact("1.75 دقيقة")!!, d)
+        // 1.28 over 1.75 minutes, not over a truncated 1
+        assertEquals(0.731, Offer(pkg = "", fare = 1.28, etaMin = 2, etaExact = 1.75).perMinute!!, 0.001)
     }
 }

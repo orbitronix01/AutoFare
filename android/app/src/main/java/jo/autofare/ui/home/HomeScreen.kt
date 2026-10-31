@@ -37,12 +37,16 @@ import jo.autofare.rules.RuleSet
 import jo.autofare.ui.components.*
 import jo.autofare.ui.motion.Motion
 import jo.autofare.ui.motion.enterProgress
+import jo.autofare.ui.dinars
+import jo.autofare.ui.fig
 import jo.autofare.ui.minutes
 import jo.autofare.ui.motion.stagger
 import jo.autofare.ui.rememberHistory
 import jo.autofare.ui.requests
 import jo.autofare.ui.theme.*
-import java.util.Locale
+import jo.autofare.ui.arFixed
+import jo.autofare.ui.arNum
+import jo.autofare.ui.arPercent
 
 /** Decelerating curve — things arrive quickly then settle. */
 private fun easeOut(x: Float): Float {
@@ -68,8 +72,8 @@ private data class HomeData(
     val recent: List<History.Row>,
 )
 
-/** Dinars, the way the rest of the app prints them. */
-private fun jod(v: Double): String = String.format(Locale.US, "%.2f", v)
+/** Dinars, the way the rest of the app prints them: Arabic-Indic, `٢٫٥٠`. */
+private fun jod(v: Double): String = arFixed(v)
 
 @Composable
 fun HomeScreen() {
@@ -180,7 +184,7 @@ private fun ShiftBlock(data: HomeData?) {
             )
             VRule()
             Stat(
-                value = data?.today?.acceptRate?.let { "${(it * 100).toInt()}%" } ?: "—",
+                value = data?.today?.acceptRate?.let { arPercent((it * 100).toInt()) } ?: "—",
                 label = "نسبة القبول",
                 modifier = Modifier.weight(1f),
             )
@@ -286,7 +290,7 @@ private fun ScoreBlock(data: HomeData?) {
                     }
                 }
                 Text(
-                    if (score == null) "—" else "${(score * dial).toInt()}",
+                    if (score == null) "—" else arNum((score * dial).toInt()),
                     style = FigureMedium.copy(fontSize = 25.sp),
                     color = if (score == null) af.muted else af.ink,
                 )
@@ -294,18 +298,18 @@ private fun ScoreBlock(data: HomeData?) {
             Spacer(Modifier.width(18.dp))
             Column(Modifier.weight(1f)) {
                 val head = when {
-                    score == null -> "لسا بدري"
+                    score == null -> "لسّا بدري"
                     score >= 70 -> "يوم منيح"
                     score >= 45 -> "يوم عادي"
                     else -> "يوم بطيء"
                 }
                 val body = when {
                     score == null ->
-                        "منحسبلك تقييم اليوم لما يصير عندك شغل أسبوع كامل منقارن عليه."
+                        "بس يصير عندك أسبوع شغل، منقارن كل يوم فيه وبنعطيك علامة."
                     today != null && week != null && today >= week ->
-                        "ربحك بالساعة اليوم ${jod(today)} د.أ — فوق متوسطك (${jod(week)})."
+                        "اليوم بتطلّع ${dinars(today)} بالساعة، وهاد فوق معدّلك (${fig(week)})."
                     today != null && week != null ->
-                        "ربحك بالساعة اليوم ${jod(today)} د.أ — تحت متوسطك (${jod(week)})."
+                        "اليوم بتطلّع ${dinars(today)} بالساعة، وهاد تحت معدّلك (${fig(week)})."
                     else -> ""
                 }
                 Text(head, fontWeight = FontWeight.Bold, fontSize = 14.5.sp, color = af.ink)
@@ -336,7 +340,7 @@ private fun anyAppArmed(): Boolean {
     val licenseStore = remember(context) { LicenseStore(context) }
     var rulesOn by remember { mutableStateOf(false) }
     var serviceOn by remember { mutableStateOf(AutoFareService.isEnabled(context)) }
-    var paid by remember { mutableStateOf(License.state(licenseStore) is License.State.Active) }
+    var paid by remember { mutableStateOf(License.unlocked(licenseStore)) }
 
     DisposableEffect(store) {
         rulesOn = DETECTED_APPS.any { store.get(it.id).enabled }
@@ -351,9 +355,9 @@ private fun anyAppArmed(): Boolean {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 serviceOn = AutoFareService.isEnabled(context)
-                // the daily re-check in SubscriptionCard can expire a key while the
-                // app is open, and the band must not keep claiming otherwise
-                paid = License.state(licenseStore) is License.State.Active
+                // a check-in can lock the phone while the app is open, and the
+                // band must not keep claiming otherwise
+                paid = License.unlocked(licenseStore)
             }
         }
         owner.lifecycle.addObserver(observer)
@@ -371,13 +375,23 @@ private fun AppRows() {
     DETECTED_APPS.forEach { app ->
         key(app.id) {
             var rules by remember { mutableStateOf(store.get(app.id)) }
+            // the floating button writes these too, from over the ride app; a
+            // switch here still showing the old state would flip it the wrong way
+            DisposableEffect(store) {
+                val listener = store.observe { rules = store.get(app.id) }
+                onDispose { store.stopObserving(listener) }
+            }
             AppRow(
                 app = app,
                 rules = rules,
                 onToggle = {
                     // writing straight through: a driver must not be able to leave
                     // the home toggle in a state the engine has not been told about
-                    rules = rules.copy(enabled = !rules.enabled).also { store.put(app.id, it) }
+                    // and only the switch: the rest of the rule set is shared, and this
+                    // row's copy of it must never be written back over a newer one
+                    val next = !rules.enabled
+                    rules = rules.copy(enabled = next)
+                    store.setEnabled(app.id, next)
                 },
             )
         }
@@ -409,14 +423,18 @@ private fun AppRow(app: RideApp, rules: RuleSet, onToggle: () -> Unit) {
     }
 }
 
-/** The driver's own rule, said back to him in one line. */
+/**
+ * The driver's own rule, said back to him in one line — the same words the
+ * rules screen uses for each choice, so the two screens read as one.
+ */
 private fun ruleSummary(r: RuleSet, app: RideApp): String {
-    val eta = "لحد ${minutes(r.maxEtaMin)}"
+    if (!r.enabled) return "مطفي — ما منقبل منه ولا طلب"
+    val eta = "الزبون لحد ${minutes(r.maxEtaMin)}"
     return when (r.mode) {
-        Mode.EVERYTHING -> "كل الطلبات · $eta"
-        Mode.FLOOR -> "من ${jod(r.floor)} ${app.currency} وفوق · $eta"
-        Mode.BAND -> "بين ${jod(r.floor)} و ${jod(r.ceiling)} ${app.currency} · $eta"
-        Mode.PER_MINUTE -> "ربح بالدقيقة ${jod(r.rate)} ${app.currency} · $eta"
+        Mode.EVERYTHING -> "أي طلب قريب · $eta"
+        Mode.FLOOR -> "أجرة ${fig(r.floor)} ${app.currency} أو أكثر · $eta"
+        Mode.BAND -> "أجرة بين ${fig(r.floor)} و${fig(r.ceiling)} ${app.currency} · $eta"
+        Mode.PER_MINUTE -> "${fig(r.rate)} ${app.currency} للدقيقة أو أكثر · $eta"
     }
 }
 
@@ -428,7 +446,7 @@ private fun DecisionList(rows: List<History.Row>?) {
     if (rows == null) return
     if (rows.isEmpty()) {
         Text(
-            "لساته ما إجا ولا طلب. شغّل تطبيق الرحلات وخلّي AutoFare شغّال.",
+            "لسّا ما إجا ولا طلب. افتح جيني أو بترا وخلّي القبول التلقائي شغّال.",
             fontSize = 12.sp, color = af.muted, lineHeight = 20.sp,
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp),
         )
@@ -458,7 +476,7 @@ private fun DecisionRow(row: History.Row) {
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(
-                    (if (row.accepted) "قبلنا — " else "رفضنا — ") + appName,
+                    (if (row.accepted) "قبلنا طلب " else "تركنا طلب ") + appName,
                     fontWeight = FontWeight.Bold, fontSize = 13.sp, color = af.ink,
                 )
                 Spacer(Modifier.height(3.dp))
@@ -483,7 +501,7 @@ private fun detail(row: History.Row): String {
     if (route.size == 2) bits += "${route[0]} ← ${route[1]}"
 
     row.etaMin?.let { bits += minutes(it) }
-    row.perMinute?.let { bits += "${jod(it)} للدقيقة" }
+    row.perMinute?.let { bits += "${fig(it)} د.أ للدقيقة" }
 
     // a refusal explains itself; the Reason enum already carries its own Arabic
     if (!row.accepted) {
@@ -509,16 +527,16 @@ private fun AdviceCard(data: HomeData?) {
 
     val refused = today.seen - today.accepted
     val line = buildString {
-        append("من الصبح شفنا ${requests(today.seen)}")
-        if (refused > 0) append(" ورفضنا $refused")
+        append("من الصبح إجاك ${requests(today.seen)}")
+        if (refused > 0) append("، وتركنا منهم ${arNum(refused)}")
         append(".")
         val t = today.perHour
         val w = data.week.perHour
         if (t != null && w != null && w > 0) {
             val pct = (((t - w) / w) * 100).toInt()
             if (pct != 0) {
-                append(if (pct > 0) " ربحك بالساعة أعلى $pct% من متوسطك."
-                       else " ربحك بالساعة أقل ${-pct}% من متوسطك.")
+                append(if (pct > 0) " ربحك بالساعة أعلى من معدّلك بـ${arPercent(pct)}."
+                       else " ربحك بالساعة أقل من معدّلك بـ${arPercent(-pct)}.")
             }
         }
     }

@@ -1,5 +1,6 @@
 package jo.autofare.service
 
+import jo.autofare.ui.arNum
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -53,7 +54,7 @@ class LearnNotifier(private val context: Context) {
                 .setSmallIcon(R.mipmap.ic_launcher)
                 .setContentTitle("AutoFare — وضع التعلّم شغّال")
                 // same wording as the learn screen, so the driver is looking for one number
-                .setContentText("$total شاشة · منها $kept مهمة")
+                .setContentText("${arNum(total)} شاشة · منها ${arNum(kept)} مهمة")
                 .setOngoing(true)
                 .setSilent(true)
                 .setShowWhen(false)
