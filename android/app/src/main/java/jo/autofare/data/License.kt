@@ -224,6 +224,24 @@ class LicenseStore(context: Context) {
 
     fun clear() = sp.edit().clear().apply()
 
+    /**
+     * Call [onChange] whenever the subscription changes.
+     *
+     * The service caches the expiry, so without this a driver who activates a key
+     * mid-shift keeps being refused until something restarts the service — which
+     * on EMUI means he reinstalls, or gives up. Same weak-reference caveat as
+     * `RulesStore.observe`: the caller has to hold the listener.
+     */
+    fun observe(onChange: () -> Unit): SharedPreferences.OnSharedPreferenceChangeListener {
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> onChange() }
+        sp.registerOnSharedPreferenceChangeListener(listener)
+        return listener
+    }
+
+    fun stopObserving(listener: SharedPreferences.OnSharedPreferenceChangeListener) {
+        sp.unregisterOnSharedPreferenceChangeListener(listener)
+    }
+
     private companion object {
         const val KEY = "key"
         const val EXPIRES = "expires_at"

@@ -13,6 +13,8 @@ import jo.autofare.auto.DecisionLog
 import jo.autofare.data.AppPrefs
 import jo.autofare.data.CaptureStore
 import jo.autofare.data.History
+import jo.autofare.data.License
+import jo.autofare.data.LicenseStore
 import jo.autofare.data.RulesStore
 import jo.autofare.data.SUPPORTED
 import jo.autofare.detect.DETECTORS
@@ -67,6 +69,7 @@ class AutoFareService : AccessibilityService() {
     private lateinit var notifier: LearnNotifier
 
     private lateinit var rulesStore: RulesStore
+    private lateinit var licenseStore: LicenseStore
     private lateinit var auto: AutoAccept
     private lateinit var history: History
 
@@ -82,7 +85,17 @@ class AutoFareService : AccessibilityService() {
     /** True when at least one app has auto-accept switched on. The cheapest gate we have. */
     @Volatile private var armed = false
 
+    /**
+     * When the subscription runs out, cached from disk.
+     *
+     * Held as the instant rather than a boolean so an expiry that passes mid-shift
+     * takes effect on the next offer without anything having to re-read it — the
+     * accept path compares two longs and never touches SharedPreferences.
+     */
+    @Volatile private var paidUntil = 0L
+
     private var rulesListener: SharedPreferences.OnSharedPreferenceChangeListener? = null
+    private var licenseListener: SharedPreferences.OnSharedPreferenceChangeListener? = null
 
     /** What we know about one on-screen layout, keyed by its shape. */
     private class Shape {
@@ -107,6 +120,7 @@ class AutoFareService : AccessibilityService() {
         notifier = LearnNotifier(this)
 
         rulesStore = RulesStore(this)
+        licenseStore = LicenseStore(this)
         history = History.get(this)
         auto = AutoAccept(
             rulesFor = { pkg -> rules[pkg] ?: RuleSet() },
@@ -117,13 +131,16 @@ class AutoFareService : AccessibilityService() {
                 DecisionLog.add(outcome, at)
                 history.record(outcome, at)
             },
+            paid = { System.currentTimeMillis() < paidUntil },
         )
         loadRules()
+        loadLicense()
         rulesListener = rulesStore.observe {
             loadRules()
             // a rule change makes every earlier decision irrelevant
             auto.reset()
         }
+        licenseListener = licenseStore.observe { loadLicense() }
 
         running = true
         epoch = prefs.captureEpoch
@@ -135,6 +152,7 @@ class AutoFareService : AccessibilityService() {
     override fun onDestroy() {
         running = false
         rulesListener?.let { rulesStore.stopObserving(it) }
+        licenseListener?.let { licenseStore.stopObserving(it) }
         if (::notifier.isInitialized) notifier.hide()
         super.onDestroy()
     }
@@ -152,6 +170,20 @@ class AutoFareService : AccessibilityService() {
             .associate { it.packageName to rulesStore.get(it.id) }
         rules = loaded
         armed = loaded.values.any { it.enabled }
+    }
+
+    /**
+     * Cache the expiry off disk.
+     *
+     * A refusal counts as no subscription: the server has positively said this key
+     * is not good, and honouring the stored expiry anyway would make revoking a
+     * shared key pointless.
+     */
+    private fun loadLicense() {
+        paidUntil = when (License.state(licenseStore)) {
+            is License.State.Active -> licenseStore.expiresAt
+            else -> 0L
+        }
     }
 
     override fun onInterrupt() {}

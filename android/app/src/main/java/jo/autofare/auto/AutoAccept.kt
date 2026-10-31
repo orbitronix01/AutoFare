@@ -41,6 +41,20 @@ class AutoAccept(
     private val rulesFor: (String) -> RuleSet,
     private val now: () -> Long,
     private val log: (Outcome) -> Unit = {},
+    /**
+     * Whether the subscription is good, as a boolean already in memory.
+     *
+     * Same rule as [rulesFor]: no disk and no network on this path. `License`
+     * writes the expiry to disk and the service caches the answer, so the cost
+     * here is a field read — see the licence notes in `data/License.kt` for why
+     * a check that can fail on a weak cell must never sit between the offer and
+     * the press.
+     *
+     * Deliberately has no default. A gate that defaults to "paid" is one forgotten
+     * argument away from giving the app away, and the compiler is the only thing
+     * that will notice.
+     */
+    private val paid: () -> Boolean,
 ) {
 
     /** What happened on one offer. */
@@ -93,7 +107,15 @@ class AutoAccept(
         seen[fp] = at
         if (seen.size > REMEMBER_MAX) prune(at)
 
-        val decision = decide(offer, rulesFor(screen.pkg))
+        /*
+         * The subscription is checked here rather than before the detector runs,
+         * so an unpaid driver still gets a logged line per offer saying why
+         * nothing happened. Silence would read as a broken app, and the refusal
+         * is the one thing that explains the subscription card to him.
+         */
+        val decision =
+            if (!paid()) Decision.Skip(Reason.UNPAID)
+            else decide(offer, rulesFor(screen.pkg))
 
         var pressed = false
         if (decision is Decision.Accept) {

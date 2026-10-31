@@ -41,7 +41,13 @@ class AutoAcceptTest {
     private fun engine(
         rules: RuleSet = greedy,
         log: MutableList<AutoAccept.Outcome> = mutableListOf(),
-    ) = AutoAccept(rulesFor = { rules }, now = { clock }, log = { log += it })
+        paid: Boolean = true,
+    ) = AutoAccept(
+        rulesFor = { rules },
+        now = { clock },
+        log = { log += it },
+        paid = { paid },
+    )
 
     @Test
     fun `an offer that passes the rules is pressed`() {
@@ -55,6 +61,23 @@ class AutoAcceptTest {
         assertEquals(Decision.Accept, outcome!!.decision)
         assertTrue(outcome.pressed)
         assertEquals(listOf("com.PetraRide_Captain:id/accept_button"), screen.presses)
+        assertEquals(1, log.size)
+    }
+
+    @Test
+    fun `an offer is not pressed without a subscription`() {
+        val log = mutableListOf<AutoAccept.Outcome>()
+        val auto = engine(log = log, paid = false)
+        val screen = screen("petra-offer-basic", PetraDetector.pkg)
+
+        val outcome = auto.onScreen(screen)
+
+        // the same screen the first test presses — only the subscription differs
+        assertNotNull(outcome)
+        assertEquals(Decision.Skip(Reason.UNPAID), outcome!!.decision)
+        assertFalse(outcome.pressed)
+        assertEquals(emptyList<String>(), screen.presses)
+        // still logged: an unpaid driver gets a line telling him why, not silence
         assertEquals(1, log.size)
     }
 

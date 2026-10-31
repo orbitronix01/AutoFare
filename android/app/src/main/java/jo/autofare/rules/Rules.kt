@@ -63,6 +63,7 @@ sealed interface Decision {
  */
 enum class Reason(val ar: String) {
     OFF("القبول التلقائي مطفي"),
+    UNPAID("ما في اشتراك فعّال"),
     TOO_CHEAP("تحت الحد"),
     TOO_EXPENSIVE("فوق الحد"),
     TOO_FAR("الزبون بعيد"),

@@ -28,6 +28,8 @@ import androidx.lifecycle.LifecycleEventObserver
 import jo.autofare.service.AutoFareService
 import jo.autofare.data.DETECTED_APPS
 import jo.autofare.data.History
+import jo.autofare.data.License
+import jo.autofare.data.LicenseStore
 import jo.autofare.data.RideApp
 import jo.autofare.data.RulesStore
 import jo.autofare.rules.Mode
@@ -319,17 +321,22 @@ private fun ScoreBlock(data: HomeData?) {
 /**
  * True only when AutoFare can actually take a ride.
  *
- * Both halves are required. A rule being on means nothing if Android has the
+ * All three parts are required. A rule being on means nothing if Android has the
  * accessibility service switched off — and EMUI switches it off after every
- * install — so a band reading الدوام شغّال off the rules alone tells a driver he
- * is covered during the exact shift where he is not.
+ * install — so a band reading القبول التلقائي شغّال off the rules alone tells a
+ * driver he is covered during the exact shift where he is not. The subscription
+ * is the same kind of lie in the other direction: the engine refuses every offer
+ * with [jo.autofare.rules.Reason.UNPAID] once it lapses, and the band has to say
+ * so here rather than let him find out from a shift's worth of missed rides.
  */
 @Composable
 private fun anyAppArmed(): Boolean {
     val context = LocalContext.current
     val store = remember(context) { RulesStore(context) }
+    val licenseStore = remember(context) { LicenseStore(context) }
     var rulesOn by remember { mutableStateOf(false) }
     var serviceOn by remember { mutableStateOf(AutoFareService.isEnabled(context)) }
+    var paid by remember { mutableStateOf(License.state(licenseStore) is License.State.Active) }
 
     DisposableEffect(store) {
         rulesOn = DETECTED_APPS.any { store.get(it.id).enabled }
@@ -342,13 +349,18 @@ private fun anyAppArmed(): Boolean {
     val owner = LocalLifecycleOwner.current
     DisposableEffect(owner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) serviceOn = AutoFareService.isEnabled(context)
+            if (event == Lifecycle.Event.ON_RESUME) {
+                serviceOn = AutoFareService.isEnabled(context)
+                // the daily re-check in SubscriptionCard can expire a key while the
+                // app is open, and the band must not keep claiming otherwise
+                paid = License.state(licenseStore) is License.State.Active
+            }
         }
         owner.lifecycle.addObserver(observer)
         onDispose { owner.lifecycle.removeObserver(observer) }
     }
 
-    return rulesOn && serviceOn
+    return rulesOn && serviceOn && paid
 }
 
 @Composable
