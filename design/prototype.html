@@ -183,10 +183,6 @@ html[data-theme="dark"] .band{color:#0C1A14}
 .band.off{background:var(--flag)}
 .band .pip{width:6px;height:6px;border-radius:50%;background:currentColor}
 
-/* header settings gear — padded out to a 40px target, drawn at 20 */
-.gear{background:none;border:0;padding:10px;margin:-10px;color:var(--ink);cursor:pointer;display:flex;border-radius:50%}
-.gear:hover{background:var(--rule)}
-
 .figure{display:flex;align-items:baseline;gap:10px;direction:ltr;justify-content:flex-end;margin:18px 0 0}
 .figure b{font-family:'Archivo';font-weight:900;font-size:68px;line-height:.86;letter-spacing:-.05em;font-variant-numeric:tabular-nums}
 .figure i{font-style:normal;font-family:'Archivo';font-size:16px;font-weight:700;color:var(--muted)}
@@ -382,6 +378,12 @@ html[data-theme="dark"] .stamp{color:#0B1A14}
 .key{display:flex;align-items:center;justify-content:space-between;margin-top:15px;background:var(--sunk);border-radius:var(--sh-sm);padding:12px 14px}
 .key code{font-family:'Archivo';font-size:13px;font-weight:700;letter-spacing:.07em;direction:ltr}
 .key button{background:none;border:0;color:var(--ink);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;text-decoration:underline}
+/* Material 3 OutlinedTextField — the key is Latin, so the input stays LTR
+   however the card around it reads */
+.field{display:block;position:relative;margin-top:14px}
+.field>span{position:absolute;top:-7px;right:11px;padding:0 5px;background:var(--raised);font-size:11px;color:var(--muted)}
+.field input{width:100%;box-sizing:border-box;padding:16px 14px;border:1px solid var(--rule-2);border-radius:var(--sh-sm);background:none;color:var(--ink);font-family:'Archivo';font-size:14px;font-weight:700;letter-spacing:.07em;direction:ltr;text-align:left;text-transform:uppercase}
+.field input:focus{outline:none;border-color:var(--ink);border-width:1.5px}
 
 /* profiles */
 .prof{display:flex;align-items:center;gap:13px;padding:15px 20px;border-bottom:1px solid var(--rule)}
@@ -611,24 +613,16 @@ body.flat .notch{display:none}
 
     <!-- ══════ HOME ══════ -->
     <section class="screen active" id="home">
+      <!-- just the mark — Settings moved into the bottom bar, so no gear up here -->
       <div class="topline">
         <div class="bm">
           <img class="mk" src="assets/logo-mark.png" alt="AutoFare">
         </div>
-        <button class="gear" data-go="settings" aria-label="الإعدادات">
-          <svg viewBox="0 0 20 20" width="20" height="20" fill="none" stroke="currentColor"
-               stroke-width="1.7" stroke-linecap="round">
-            <circle cx="10" cy="10" r="6"/><circle cx="10" cy="10" r="2.2"/>
-            <g><path d="M10 3.2V1.1"/><path d="M10 18.9v-2.1"/><path d="M16.8 10h2.1"/><path d="M1.1 10h2.1"/>
-               <path d="M14.8 5.2l1.5-1.5"/><path d="M3.7 16.3l1.5-1.5"/>
-               <path d="M14.8 14.8l1.5 1.5"/><path d="M3.7 3.7l1.5 1.5"/></g>
-          </svg>
-        </button>
       </div>
 
       <div class="shift">
         <div class="row">
-          <span class="band slant" id="band"><span class="unslant" style="display:flex;align-items:center;gap:7px"><i class="pip"></i><span id="bandTxt">الدوام شغّال</span></span></span>
+          <span class="band slant" id="band"><span class="unslant" style="display:flex;align-items:center;gap:7px"><i class="pip"></i><span id="bandTxt">القبول التلقائي شغّال</span></span></span>
         </div>
 
         <div class="figure"><b id="money">47.50</b></div>
@@ -645,7 +639,8 @@ body.flat .notch{display:none}
           <div><b>61%</b><span>نسبة القبول</span></div>
         </div>
 
-        <button class="btn lg" id="power" style="margin-top:18px">وقّف الدوام</button>
+        <!-- no power button: the band follows the app switches below, the way
+             anyAppArmed() reads them in HomeScreen.kt -->
       </div>
 
       <div class="score" style="margin-top:22px">
@@ -659,7 +654,9 @@ body.flat .notch{display:none}
         </div>
         <div class="meta">
           <h4>يوم منيح</h4>
-          <p>ربحك بالساعة فوق متوسطك. بس ضيّعت 3 طلبات حلوة وإنت بوضع الراحة — جرّب تقصّر الاستراحة.</p>
+          <!-- ScoreBlock.kt: the score is relative to the driver's own week, so
+               the line names both figures and invents no benchmark -->
+          <p>ربحك بالساعة اليوم 11.40 د.أ — فوق متوسطك (8.20).</p>
         </div>
       </div>
 
@@ -699,7 +696,7 @@ body.flat .notch{display:none}
 
       <div class="advice" style="margin-top:20px">
         <div class="speed"><i></i><i></i><i></i></div>
-        <p>من الصبح رفضنا <b>14 طلب</b> كانوا بيضيّعوا عليك وقت. ربحك بالساعة أعلى <b>18%</b> من أمس.</p>
+        <p>من الصبح شفنا <b>23 طلب</b> ورفضنا <b>14</b>. ربحك بالساعة أعلى <b>39%</b> من متوسطك.</p>
       </div>
     </section>
 
@@ -850,25 +847,30 @@ body.flat .notch{display:none}
     <!-- ══════ SETTINGS ══════ -->
     <section class="screen" id="settings">
       <div class="topline">
-        <div><h1 class="ttl">الإعدادات</h1><p class="dek">جاهزية الجهاز والاشتراك.</p></div>
-        <button class="backlink" data-go="home">رجوع</button>
+        <!-- no رجوع any more — this is a tab, and the bar below is the way out -->
+        <div><h1 class="ttl">الإعدادات</h1><p class="dek">الأذونات والاشتراك.</p></div>
       </div>
 
-      <div class="sec"><span class="ix">01</span><span class="lb">جاهزية الجهاز</span></div>
-      <div class="perm ok"><div class="ic">✓</div><div class="gro"><b>إمكانية الوصول</b><span>مفعّلة — AutoFare شايف الطلبات</span></div><div class="st">تمام</div></div>
-      <div class="perm ok"><div class="ic">✓</div><div class="gro"><b>حماية البطارية</b><span>النظام مش راح يسكّر التطبيق</span></div><div class="st">تمام</div></div>
-      <div class="perm todo"><div class="ic">!</div><div class="gro"><b>الظهور فوق التطبيقات</b><span>لازمك إياها للزر العائم</span></div><div class="st">فعّلها</div></div>
+      <!-- the three rows Readiness.kt reads off the system. The labels are
+           Android's own Arabic, because the driver has to find them in his phone. -->
+      <div class="sec"><span class="ix">01</span><span class="lb">الأذونات</span></div>
+      <div class="perm ok"><div class="ic">✓</div><div class="gro"><b>إمكانية الوصول</b><span>مفعّلة — AutoFare شايف الطلبات</span></div><div class="st">مفعّلة</div></div>
+      <div class="perm todo"><div class="ic">!</div><div class="gro"><b>تحسين البطارية</b><span>النظام ممكن يسكّر التطبيق وإنت شغّال</span></div><div class="st">تفعيل</div></div>
+      <div class="perm todo"><div class="ic">!</div><div class="gro"><b>العرض فوق التطبيقات الأخرى</b><span>لازمك إياها للزر العائم</span></div><div class="st">تفعيل</div></div>
 
+      <!-- SubscriptionCard.kt. Shown in its None state — no key on the phone yet,
+           which is what a driver sees on a fresh install. -->
       <div class="sec"><span class="ix">02</span><span class="lb">الاشتراك</span></div>
       <div class="subs">
         <div class="row">
-          <span style="font-size:12.5px;font-weight:700;color:var(--accept)">فعّال</span>
+          <span style="font-size:12.5px;font-weight:700;color:var(--muted)">ما في اشتراك</span>
           <span style="font-size:11.5px;color:var(--muted)">الباقة الشهرية</span>
         </div>
-        <div class="days">27 <span style="font-size:16px;color:var(--muted);font-weight:600">يوم</span></div>
-        <div class="dek">بينتهي 21 تشرين الثاني</div>
-        <div class="key"><code>AF-••••-••••-3JB6</code><button>انسخ</button></div>
-        <button class="btn" style="margin-top:14px">جدّد — 5 د.أ بالشهر</button>
+        <label class="field">
+          <span>رمز الاشتراك</span>
+          <input type="text" autocomplete="off" spellcheck="false" aria-label="رمز الاشتراك">
+        </label>
+        <button class="btn" style="margin-top:10px">فعّل الاشتراك</button>
         <p class="hint" style="text-align:center">ادفع بـ CliQ أو زين كاش · التفعيل فوري</p>
       </div>
 
@@ -890,7 +892,8 @@ body.flat .notch{display:none}
         <div class="tl" style="border-bottom:0"><div class="gro"><b>اهتزاز عند الرفض</b><p>هزّة خفيفة — بتعرف إنه الطلب إجا وانرفض.</p></div><div class="sw" data-sw></div></div>
       </div>
 
-      <p style="text-align:center;margin-top:30px;font-size:11px;font-weight:600;color:var(--muted)">AutoFare 1.0 · عمّان</p>
+      <!-- read from BuildConfig.VERSION_NAME in the app, not typed -->
+      <p style="text-align:center;margin-top:30px;font-size:11px;font-weight:600;color:var(--muted)">AutoFare 0.4-auto · عمّان</p>
     </section>
 
     <!-- ══════ LEARN MODE ══════ -->
@@ -995,15 +998,18 @@ body.flat .notch{display:none}
     <button aria-selected="false" data-go="stats">
       <span class="ind"><svg viewBox="0 0 24 24"><path d="M4 20V11M10 20V4M16 20v-6M22 20H2"/></svg></span>الإحصائيات
     </button>
+    <button aria-selected="false" data-go="settings">
+      <span class="ind"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.2"/><circle cx="12" cy="12" r="2.6"/><path d="M12 2.8v2.6M12 18.6v2.6M21.2 12h-2.6M5.4 12H2.8M18.5 5.5l-1.8 1.8M7.3 16.7l-1.8 1.8M18.5 18.5l-1.8-1.8M7.3 7.3 5.5 5.5"/></svg></span>الإعدادات
+    </button>
   </nav>
 </div>
 
 <p class="foot">
-  مطابق لكود v0.4 بعد التحديث لـ <b>Material 3 Expressive</b> — المفاتيح والبطاقات والأزرار
-  والشريط السفلي كلها مكوّنات ماتيريال هلق، والخط IBM Plex Sans Arabic بدون أي تباعد حروف.
-  القواعد ووضع التعلّم بيتصرّفوا متل التطبيق؛ باقي الأرقام تمثيلية.<br>
+  مطابق لكود v0.4-auto. <b>الإعدادات</b> صارت تبويب بالشريط السفلي، و<b>وضع التعلّم</b>
+  لحاله بينفتح من جوّاها. الأرقام هون تمثيلية — بالتطبيق بتيجي من قاعدة بيانات
+  SQLite، وقبل ما يصير في شغل محفوظ بتطلع فاضية (تقييم اليوم بيقول «لسا بدري»،
+  والنِسب بتطلع «—») بدل ما تخترع أرقام.<br>
   ★ <b>لحظة القبول</b> و<b>الزر العائم</b> تصميم بس، لسا ما انبنوا — وهدول لسا بالشكل القديم.
-  <b>الإعدادات</b> و<b>وضع التعلّم</b> بتوصلهم من الرئيسية، مش من الشريط السفلي.
 </p>
 
 <script>
@@ -1040,9 +1046,9 @@ function go(id){
   screens.forEach(s => s.classList.toggle('active', s.id === id));
   document.querySelectorAll('.picker [data-go]')
     .forEach(b => b.setAttribute('aria-selected', String(b.dataset.go === id)));
-  // Settings and Learn are pushed screens, not tabs — the bottom bar keeps Home
-  // lit while they are open, exactly as BottomBar does in AppScaffold.kt.
-  const tabId = (id === 'settings' || id === 'learn') ? 'home' : id;
+  // Learn is the one screen still pushed off a tab, so Settings stays lit
+  // while it is open — exactly as BottomBar does in AppScaffold.kt.
+  const tabId = id === 'learn' ? 'settings' : id;
   document.querySelectorAll('.tabs [data-go]')
     .forEach(b => b.setAttribute('aria-selected', String(b.dataset.go === tabId)));
   document.querySelector('.vp').scrollTop = 0;
@@ -1067,15 +1073,20 @@ document.addEventListener('click', e => {
   if (!sw) return;
   sw.classList.toggle('on');
   if (sw.id === 'darkSw') setTheme(sw.classList.contains('on') ? 'dark' : 'light');
+  if (sw.closest('#home .app')) syncBand();
 });
 
-const power = document.getElementById('power');
-power.addEventListener('click', () => {
-  const off = document.getElementById('band').classList.toggle('off');
-  power.textContent = off ? 'ابدأ الدوام' : 'وقّف الدوام';
-  power.classList.toggle('ghost', off);
-  document.getElementById('bandTxt').textContent = off ? 'الدوام واقف' : 'الدوام شغّال';
-});
+/* The band is not a control — it reports. anyAppArmed() in HomeScreen.kt is
+   true only when some app is switched on AND the accessibility service is
+   running; here the switches are all we have, so they alone drive it. */
+function syncBand(){
+  const armed = [...document.querySelectorAll('#home .app [data-sw]')]
+    .some(sw => sw.classList.contains('on'));
+  document.getElementById('band').classList.toggle('off', !armed);
+  document.getElementById('bandTxt').textContent =
+    armed ? 'القبول التلقائي شغّال' : 'القبول التلقائي مطفي';
+}
+syncBand();
 
 /* ═══════════════════════════════════════════════════════════════════════════
    RULES — a port of rules/Rules.kt and ui/rules/RulesScreen.kt, so the preview
