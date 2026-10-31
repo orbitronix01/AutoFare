@@ -1,6 +1,7 @@
 package jo.autofare.data
 
 import androidx.compose.ui.graphics.Color
+import jo.autofare.detect.DETECTORS
 
 /**
  * A ride-hailing app AutoFare can watch.
@@ -59,3 +60,14 @@ val SUPPORTED: List<RideApp> = listOf(
         letter = "U",
     ),
 )
+
+/**
+ * The apps AutoFare can actually act on — a confirmed package *and* a detector
+ * written against a real capture of its offer screen.
+ *
+ * The screens iterate this rather than [SUPPORTED] so an unverified guess never
+ * shows a driver a toggle that could not do anything if he flipped it. Same
+ * filter the service arms on, kept in one place so the two cannot drift.
+ */
+val DETECTED_APPS: List<RideApp> =
+    SUPPORTED.filter { it.verified && it.packageName in DETECTORS }

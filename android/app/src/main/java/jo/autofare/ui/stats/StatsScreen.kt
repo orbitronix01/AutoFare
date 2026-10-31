@@ -2,7 +2,6 @@ package jo.autofare.ui.stats
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -19,26 +18,61 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import jo.autofare.data.DETECTED_APPS
+import jo.autofare.data.History
+import jo.autofare.rules.Reason
 import jo.autofare.ui.components.*
 import jo.autofare.ui.motion.Motion
 import jo.autofare.ui.motion.enterProgress
 import jo.autofare.ui.motion.stagger
+import jo.autofare.ui.rememberHistory
+import jo.autofare.ui.requests
 import jo.autofare.ui.theme.FigureLarge
 import jo.autofare.ui.theme.LocalAfColors
+import java.util.Calendar
+import java.util.Locale
 
 private fun easeOut(x: Float): Float {
     val c = x.coerceIn(0f, 1f)
     return 1f - (1f - c) * (1f - c) * (1f - c)
 }
 
-private val HOURS = listOf(
-    "6" to .28f, "8" to .50f, "10" to .38f, "12" to .26f, "14" to .44f,
-    "16" to .90f, "18" to 1.0f, "20" to .66f, "22" to .54f, "24" to .32f,
+private fun jod(v: Double): String = String.format(Locale.US, "%.2f", v)
+
+/**
+ * Which hours get a bar.
+ *
+ * Every other hour from 06:00 to midnight. Drivers in Amman work evenings; the
+ * small hours are shown folded into the last slot rather than given five empty
+ * columns of their own.
+ */
+private val HOUR_SLOTS = listOf(6, 8, 10, 12, 14, 16, 18, 20, 22)
+
+private data class StatsData(
+    val week: History.Summary,
+    val prevWeek: History.Summary,
+    val byHour: Map<Int, Double>,
+    val byApp: Map<String, Double>,
+    val byReason: Map<String, Int>,
 )
 
 @Composable
 fun StatsScreen() {
     val af = LocalAfColors.current
+
+    val data = rememberHistory { h ->
+        val now = System.currentTimeMillis()
+        val weekStart = History.startOfWeek(now)
+        val weekMs = 7 * 24 * 60 * 60 * 1000L
+        StatsData(
+            week = h.summary(weekStart),
+            // the week before, so "↑ 18%" is a measurement instead of a decoration
+            prevWeek = h.summary(weekStart - weekMs, weekStart - 1),
+            byHour = h.byHourOfDay(weekStart),
+            byApp = h.byApp(weekStart),
+            byReason = h.byReason(weekStart),
+        )
+    }
 
     Column(
         Modifier
@@ -47,52 +81,112 @@ fun StatsScreen() {
             .verticalScroll(rememberScrollState())
             .padding(bottom = 32.dp)
     ) {
-        ScreenHeader("الإحصائيات", "هاد الأسبوع · 18 — 24 تشرين")
+        ScreenHeader("الإحصائيات", weekLabel())
 
         Rule()
         Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
-            Kpi("312.80", "د.أ هاد الأسبوع", "↑ 18%", Modifier.weight(1f))
+            Kpi(
+                value = data?.week?.earnings?.let { jod(it) } ?: "—",
+                label = "د.أ هاد الأسبوع",
+                delta = deltaText(data?.week?.earnings, data?.prevWeek?.earnings),
+                modifier = Modifier.weight(1f),
+                highlight = isUp(data?.week?.earnings, data?.prevWeek?.earnings),
+            )
             VRule()
-            Kpi("11.4", "د.أ بالساعة", "↑ 2.1 د.أ", Modifier.weight(1f))
+            Kpi(
+                value = data?.week?.perHour?.let { jod(it) } ?: "—",
+                label = "د.أ بالساعة",
+                delta = deltaText(data?.week?.perHour, data?.prevWeek?.perHour),
+                modifier = Modifier.weight(1f),
+                highlight = isUp(data?.week?.perHour, data?.prevWeek?.perHour),
+            )
         }
         Rule()
         Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
-            Kpi("84", "رحلة مقبولة", "من 247 طلب", Modifier.weight(1f), highlight = false)
+            Kpi(
+                value = data?.week?.accepted?.toString() ?: "—",
+                label = "رحلة مقبولة",
+                delta = data?.week?.let { "من ${requests(it.seen)}" } ?: "",
+                modifier = Modifier.weight(1f),
+                highlight = false,
+            )
             VRule()
-            Kpi("0.9", "ثانية للقبول", "أسرع من 96%", Modifier.weight(1f))
+            Kpi(
+                value = data?.week?.acceptRate?.let { "${(it * 100).toInt()}%" } ?: "—",
+                label = "نسبة القبول",
+                delta = "",
+                modifier = Modifier.weight(1f),
+                highlight = false,
+            )
         }
         Rule()
 
         SectionHeader("01", "الربح حسب الساعة")
-        HourChart()
+        HourChart(data?.byHour)
 
-        Spacer(Modifier.height(18.dp))
-        AfCard(Modifier.padding(horizontal = 20.dp)) {
-            Row(Modifier.fillMaxWidth().padding(16.dp)) {
-                SpeedLines(af.ink, Modifier.padding(top = 4.dp))
-                Spacer(Modifier.width(12.dp))
-                Text(
-                    "أحسن ساعاتك 4 — 7 العصر. لو شغّلت ساعتين زيادة بهالوقت بدل الصبح، " +
-                        "تقديرنا بتكسب +46 د.أ بالأسبوع.",
-                    fontSize = 12.5.sp, color = af.ink2, lineHeight = 23.sp,
-                )
-            }
-        }
+        BestHoursCard(data)
 
-        SectionHeader("02", "من وين إجت المصاري")
+        SectionHeader("02", "الأرباح حسب التطبيق")
         Column(Modifier.padding(horizontal = 20.dp)) {
-            SplitRow("Jeeny", .68f, "212.40", Color(0xFF5B3FE8))
-            SplitRow("Petra Ride", .32f, "100.40", Color(0xFF0E76CC))
+            val split = data?.byApp.orEmpty()
+            val total = split.values.sum()
+            if (total <= 0.0) {
+                EmptyLine("لسا ما قبلنا ولا رحلة هاد الأسبوع.")
+            } else {
+                DETECTED_APPS.forEach { app ->
+                    val amount = split[app.packageName] ?: 0.0
+                    SplitRow(app.name, (amount / total).toFloat(), jod(amount), app.badge)
+                }
+            }
         }
 
         SectionHeader("03", "ليش رفضنا الطلبات")
         Column(Modifier.padding(horizontal = 20.dp)) {
-            ReasonRow("السعر تحت الحد", "59%")
-            ReasonRow("الزبون بعيد", "31%")
-            ReasonRow("منطقة ممنوعة", "10%")
-            Hint("لو نزّلت الحد من 3.00 لـ 2.60 كنت قبلت 23 طلب زيادة — بس ربحك بالساعة كان نزل 0.8 د.أ. إعدادك هلق أحسن.")
+            val reasons = data?.byReason.orEmpty()
+            val total = reasons.values.sum()
+            if (total == 0) {
+                EmptyLine("ما رفضنا ولا طلب هاد الأسبوع.")
+            } else {
+                reasons.entries
+                    .sortedByDescending { it.value }
+                    .take(4)
+                    .forEach { (name, count) ->
+                        val label = runCatching { Reason.valueOf(name).ar }.getOrDefault(name)
+                        ReasonRow(label, "${(count * 100 / total)}%")
+                    }
+            }
         }
     }
+}
+
+/** "هاد الأسبوع · 18 — 24 تشرين", built from the actual window. */
+@Composable
+private fun weekLabel(): String {
+    val cal = Calendar.getInstance()
+    val endDay = cal.get(Calendar.DAY_OF_MONTH)
+    cal.timeInMillis = History.startOfWeek()
+    val startDay = cal.get(Calendar.DAY_OF_MONTH)
+    return "آخر ٧ أيام · $startDay — $endDay"
+}
+
+private fun isUp(now: Double?, before: Double?): Boolean =
+    now != null && before != null && before > 0.0 && now > before
+
+/** A change, or nothing at all when there is no earlier week to compare with. */
+private fun deltaText(now: Double?, before: Double?): String {
+    if (now == null || before == null || before <= 0.0) return ""
+    val pct = (((now - before) / before) * 100).toInt()
+    return when {
+        pct > 0 -> "↑ $pct% عن الأسبوع اللي قبل"
+        pct < 0 -> "↓ ${-pct}% عن الأسبوع اللي قبل"
+        else -> "زي الأسبوع اللي قبل"
+    }
+}
+
+@Composable
+private fun EmptyLine(text: String) {
+    val af = LocalAfColors.current
+    Text(text, fontSize = 12.sp, color = af.muted, modifier = Modifier.padding(vertical = 16.dp))
 }
 
 @Composable
@@ -119,16 +213,24 @@ private fun Kpi(
 }
 
 @Composable
-private fun HourChart() {
+private fun HourChart(byHour: Map<Int, Double>?) {
     val af = LocalAfColors.current
+
+    // each slot owns itself and the hour after it, so two-hour columns cover the day
+    val values = HOUR_SLOTS.map { h ->
+        (byHour?.get(h) ?: 0.0) + (byHour?.get(h + 1) ?: 0.0)
+    }
+    val peak = values.maxOrNull() ?: 0.0
+
     Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
         val t = enterProgress(durationMillis = Motion.SWEEP)
         Canvas(Modifier.fillMaxWidth().height(130.dp)) {
             val gap = 5.dp.toPx()
             val shear = 6.dp.toPx()
-            val barW = (size.width - gap * (HOURS.size - 1)) / HOURS.size
-            HOURS.forEachIndexed { i, (_, v) ->
-                val h = size.height * v * easeOut(stagger(t, i, HOURS.size))
+            val barW = (size.width - gap * (values.size - 1)) / values.size
+            values.forEachIndexed { i, v ->
+                val ratio = if (peak <= 0.0) 0.04f else (v / peak).toFloat().coerceAtLeast(0.04f)
+                val h = size.height * ratio * easeOut(stagger(t, i, values.size))
                 val x = i * (barW + gap)
                 val top = size.height - h
                 drawPath(
@@ -136,7 +238,7 @@ private fun HourChart() {
                         moveTo(x + shear, top); lineTo(x + shear + barW, top)
                         lineTo(x + barW, size.height); lineTo(x, size.height); close()
                     },
-                    color = if (v >= .9f) af.ink else af.rule2,
+                    color = if (peak > 0 && v >= peak * 0.9) af.ink else af.rule2,
                 )
             }
         }
@@ -145,9 +247,9 @@ private fun HourChart() {
         // must be forced LTR too, or RTL mirrors them and every bar gets the wrong hour.
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                HOURS.forEach { (label, _) ->
+                HOUR_SLOTS.forEach { hour ->
                     Text(
-                        label,
+                        hour.toString(),
                         fontSize = 9.5.sp, fontWeight = FontWeight.Bold, color = af.muted,
                         modifier = Modifier.weight(1f),
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -157,6 +259,38 @@ private fun HourChart() {
         }
     }
 }
+
+/**
+ * The read on the week.
+ *
+ * Names the driver's own best window instead of asserting one. Hidden until
+ * there is enough in the table for "best" to mean anything — naming a peak hour
+ * off two rides is noise with a confident voice.
+ */
+@Composable
+private fun BestHoursCard(data: StatsData?) {
+    val af = LocalAfColors.current
+    val byHour = data?.byHour ?: return
+    if (data.week.accepted < MIN_RIDES_FOR_ADVICE) return
+
+    val best = byHour.maxByOrNull { it.value } ?: return
+    if (best.value <= 0.0) return
+
+    Spacer(Modifier.height(18.dp))
+    AfCard(Modifier.padding(horizontal = 20.dp)) {
+        Row(Modifier.fillMaxWidth().padding(16.dp)) {
+            SpeedLines(af.ink, Modifier.padding(top = 4.dp))
+            Spacer(Modifier.width(12.dp))
+            Text(
+                "أحسن ساعة إلك هاد الأسبوع ${best.key}:00 — جبت فيها ${jod(best.value)} د.أ.",
+                fontSize = 12.5.sp, color = af.ink2, lineHeight = 23.sp,
+            )
+        }
+    }
+}
+
+/** Below this, "your best hour" is one lucky ride rather than a pattern. */
+private const val MIN_RIDES_FOR_ADVICE = 10
 
 @Composable
 private fun SplitRow(name: String, fraction: Float, amount: String, color: Color) {
@@ -180,7 +314,7 @@ private fun SplitRow(name: String, fraction: Float, amount: String, color: Color
             ) {
                 Box(
                     Modifier
-                        .fillMaxWidth(fraction * grow)
+                        .fillMaxWidth((fraction * grow).coerceIn(0f, 1f))
                         .fillMaxHeight()
                         .background(color, RoundedCornerShape(99.dp))
                 )

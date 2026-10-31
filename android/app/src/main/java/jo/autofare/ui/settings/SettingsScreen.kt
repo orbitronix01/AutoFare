@@ -20,6 +20,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -30,8 +31,10 @@ import jo.autofare.ui.theme.FigureLarge
 import jo.autofare.ui.theme.LocalAfColors
 
 @Composable
-fun SettingsScreen(onBack: () -> Unit, onOpenLearn: () -> Unit = {}) {
+fun SettingsScreen(onOpenLearn: () -> Unit = {}) {
     val af = LocalAfColors.current
+    val context = LocalContext.current
+    val ready = rememberReadiness()
     var bubble by rememberSaveable { mutableStateOf(true) }
     var sound by rememberSaveable { mutableStateOf(true) }
     var vibrate by rememberSaveable { mutableStateOf(false) }
@@ -43,76 +46,41 @@ fun SettingsScreen(onBack: () -> Unit, onOpenLearn: () -> Unit = {}) {
             .verticalScroll(rememberScrollState())
             .padding(bottom = 32.dp)
     ) {
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(top = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(Modifier.weight(1f)) {
-                Text("الإعدادات", fontWeight = FontWeight.Bold, fontSize = 26.sp, color = af.ink)
-                Spacer(Modifier.height(4.dp))
-                Text("جاهزية الجهاز والاشتراك.", fontSize = 12.5.sp, color = af.muted)
-            }
-            Text(
-                "رجوع",
-                fontSize = 12.5.sp, fontWeight = FontWeight.Bold, color = af.ink,
-                modifier = Modifier.clickable { onBack() }.padding(8.dp),
-            )
+        // No رجوع any more — this is a tab, and the bar below is the way out
+        Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(top = 10.dp)) {
+            Text("الإعدادات", fontWeight = FontWeight.Bold, fontSize = 26.sp, color = af.ink)
+            Spacer(Modifier.height(4.dp))
+            Text("الأذونات والاشتراك.", fontSize = 12.5.sp, color = af.muted)
         }
         Spacer(Modifier.height(18.dp))
 
-        SectionHeader("01", "جاهزية الجهاز")
+        SectionHeader("01", "الأذونات")
         Rule()
-        PermRow("إمكانية الوصول", "مفعّلة — AutoFare شايف الطلبات", ready = true)
-        PermRow("حماية البطارية", "النظام مش راح يسكّر التطبيق", ready = true)
-        PermRow("الظهور فوق التطبيقات", "لازمك إياها للزر العائم", ready = false)
+        PermRow(
+            title = "إمكانية الوصول",
+            detail = if (ready.accessibility) "مفعّلة — AutoFare شايف الطلبات"
+                     else "مطفية — AutoFare ما بيشوف ولا طلب",
+            ready = ready.accessibility,
+            onFix = { openAccessibilitySettings(context) },
+        )
+        PermRow(
+            // Android's own Arabic for this setting. The driver has to find it in
+            // his phone, so our label has to be the phrase he will see there.
+            title = "تحسين البطارية",
+            detail = if (ready.battery) "النظام مش راح يسكّر التطبيق"
+                     else "النظام ممكن يسكّر التطبيق وإنت شغّال",
+            ready = ready.battery,
+            onFix = { openBatterySettings(context) },
+        )
+        PermRow(
+            title = "العرض فوق التطبيقات الأخرى",
+            detail = "لازمك إياها للزر العائم",
+            ready = ready.overlay,
+            onFix = { openOverlaySettings(context) },
+        )
 
         SectionHeader("02", "الاشتراك")
-        // The one card drawn in ink rather than hairline — the subscription is the
-        // only thing on this screen that can stop the app working.
-        OutlinedCard(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
-            shape = MaterialTheme.shapes.extraLarge,
-            colors = CardDefaults.outlinedCardColors(containerColor = af.raised),
-            border = BorderStroke(1.5.dp, af.ink),
-        ) {
-        Column(Modifier.padding(19.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("فعّال", fontSize = 12.5.sp, fontWeight = FontWeight.Bold, color = af.accept)
-                Text("الباقة الشهرية", fontSize = 11.5.sp, color = af.muted)
-            }
-            Row(verticalAlignment = Alignment.Bottom) {
-                Text("27", style = FigureLarge.copy(fontSize = 44.sp), color = af.ink)
-                Spacer(Modifier.width(8.dp))
-                Text("يوم", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = af.muted,
-                    modifier = Modifier.padding(bottom = 6.dp))
-            }
-            Text("بينتهي 21 تشرين الثاني", fontSize = 12.5.sp, color = af.muted)
-
-            Spacer(Modifier.height(15.dp))
-            Surface(
-                color = af.sunk,
-                shape = MaterialTheme.shapes.small,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Row(
-                    Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text("AF-••••-••••-3JB6", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = af.ink)
-                    Text("انسخ", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = af.ink)
-                }
-            }
-            Spacer(Modifier.height(14.dp))
-            PrimaryButton("جدّد — 5 د.أ بالشهر", onClick = {})
-            Text(
-                "ادفع بـ CliQ أو زين كاش · التفعيل فوري",
-                fontSize = 11.5.sp, color = af.muted,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
-            )
-        }
-        }
+        SubscriptionCard()
 
         Spacer(Modifier.height(16.dp))
         PrimaryButton(
@@ -162,7 +130,8 @@ fun SettingsScreen(onBack: () -> Unit, onOpenLearn: () -> Unit = {}) {
 
         Spacer(Modifier.height(30.dp))
         Text(
-            "AutoFare 1.0 · عمّان",
+            // read from the build, not typed — it said 1.0 while the app was 0.4
+            "AutoFare ${jo.autofare.BuildConfig.VERSION_NAME} · عمّان",
             fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = af.muted,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth(),
@@ -171,10 +140,13 @@ fun SettingsScreen(onBack: () -> Unit, onOpenLearn: () -> Unit = {}) {
 }
 
 @Composable
-private fun PermRow(title: String, detail: String, ready: Boolean) {
+private fun PermRow(title: String, detail: String, ready: Boolean, onFix: () -> Unit) {
     val af = LocalAfColors.current
     Column {
         ListItem(
+            // the whole row is the target: "تفعيل" is 11.5sp and this is a screen
+            // a driver uses with the engine running
+            modifier = Modifier.clickable(enabled = !ready) { onFix() },
             leadingContent = { StatusTick(ready) },
             headlineContent = {
                 Text(title, fontWeight = FontWeight.Bold, fontSize = 13.5.sp, color = af.ink)
@@ -184,7 +156,7 @@ private fun PermRow(title: String, detail: String, ready: Boolean) {
             },
             trailingContent = {
                 Text(
-                    if (ready) "تمام" else "فعّلها",
+                    if (ready) "مفعّلة" else "تفعيل",
                     fontSize = 11.5.sp, fontWeight = FontWeight.Bold,
                     color = if (ready) af.accept else af.flag,
                 )

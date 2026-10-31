@@ -12,6 +12,7 @@ import jo.autofare.auto.AutoAccept
 import jo.autofare.auto.DecisionLog
 import jo.autofare.data.AppPrefs
 import jo.autofare.data.CaptureStore
+import jo.autofare.data.History
 import jo.autofare.data.RulesStore
 import jo.autofare.data.SUPPORTED
 import jo.autofare.detect.DETECTORS
@@ -67,6 +68,7 @@ class AutoFareService : AccessibilityService() {
 
     private lateinit var rulesStore: RulesStore
     private lateinit var auto: AutoAccept
+    private lateinit var history: History
 
     /**
      * The driver's rules, held in memory and keyed by package.
@@ -105,10 +107,16 @@ class AutoFareService : AccessibilityService() {
         notifier = LearnNotifier(this)
 
         rulesStore = RulesStore(this)
+        history = History.get(this)
         auto = AutoAccept(
             rulesFor = { pkg -> rules[pkg] ?: RuleSet() },
             now = { SystemClock.elapsedRealtime() },
-            log = { outcome -> DecisionLog.add(outcome, System.currentTimeMillis()) },
+            log = { outcome ->
+                val at = System.currentTimeMillis()
+                // in-memory, for "what did it just do"; on disk, for the stats screens
+                DecisionLog.add(outcome, at)
+                history.record(outcome, at)
+            },
         )
         loadRules()
         rulesListener = rulesStore.observe {

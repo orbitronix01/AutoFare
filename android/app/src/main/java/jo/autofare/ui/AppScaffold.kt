@@ -27,24 +27,23 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import jo.autofare.ui.components.Rule
+import jo.autofare.ui.components.drawGear
 import jo.autofare.ui.home.HomeScreen
 import jo.autofare.ui.learn.LearnScreen
 import jo.autofare.ui.rules.RulesScreen
 import jo.autofare.ui.settings.SettingsScreen
-import jo.autofare.ui.smart.SmartScreen
 import jo.autofare.ui.stats.StatsScreen
 import jo.autofare.ui.theme.LocalAfColors
 
 enum class Dest(val label: String) {
     Home("الرئيسية"),
     Rules("القواعد"),
-    Smart("الأوضاع"),
     Stats("الإحصائيات"),
     Settings("الإعدادات"),
     Learn("وضع التعلّم"),
 }
 
-private val BOTTOM_TABS = listOf(Dest.Home, Dest.Rules, Dest.Smart, Dest.Stats)
+private val BOTTOM_TABS = listOf(Dest.Home, Dest.Rules, Dest.Stats, Dest.Settings)
 
 @Composable
 fun AppScaffold() {
@@ -57,14 +56,10 @@ fun AppScaffold() {
             // own entrance animation underneath, which carries the sense of motion.
             Crossfade(targetState = dest, animationSpec = tween(170), label = "dest") { d ->
                 when (d) {
-                    Dest.Home -> HomeScreen(onOpenSettings = { dest = Dest.Settings })
+                    Dest.Home -> HomeScreen()
                     Dest.Rules -> RulesScreen()
-                    Dest.Smart -> SmartScreen()
                     Dest.Stats -> StatsScreen()
-                    Dest.Settings -> SettingsScreen(
-                        onBack = { dest = Dest.Home },
-                        onOpenLearn = { dest = Dest.Learn },
-                    )
+                    Dest.Settings -> SettingsScreen(onOpenLearn = { dest = Dest.Learn })
                     Dest.Learn -> LearnScreen(onBack = { dest = Dest.Settings })
                 }
             }
@@ -90,9 +85,8 @@ private fun BottomBar(current: Dest, onSelect: (Dest) -> Unit) {
             tonalElevation = 0.dp,
         ) {
             BOTTOM_TABS.forEach { tab ->
-                // Settings and Learn are pushed off Home, so Home stays lit there
-                val selected = current == tab ||
-                    ((current == Dest.Settings || current == Dest.Learn) && tab == Dest.Home)
+                // Learn is the one screen still pushed off a tab, so Settings stays lit there
+                val selected = current == tab || (current == Dest.Learn && tab == Dest.Settings)
                 NavigationBarItem(
                     selected = selected,
                     onClick = { onSelect(tab) },
@@ -146,13 +140,9 @@ private fun DrawScope.drawTabIcon(dest: Dest, color: Color) {
             drawLine(color, p(.36f, .11f), p(.36f, .39f), strokeWidth = stroke.width, cap = StrokeCap.Round)
             drawLine(color, p(.64f, .36f), p(.64f, .64f), strokeWidth = stroke.width, cap = StrokeCap.Round)
         }
-        Dest.Smart -> {
-            drawCircle(color, radius = s * .38f, style = stroke)
-            drawPath(Path().apply {
-                moveTo(s * .5f, s * .28f); lineTo(s * .5f, s * .52f); lineTo(s * .68f, s * .62f)
-            }, color, style = stroke)
-        }
-        Dest.Stats, Dest.Settings, Dest.Learn -> {
+        Dest.Settings -> drawGear(color)
+
+        Dest.Stats, Dest.Learn -> {
             drawLine(color, p(.10f, .86f), p(.90f, .86f), strokeWidth = stroke.width, cap = StrokeCap.Round)
             listOf(.26f to .58f, .5f to .18f, .74f to .40f).forEach { (x, top) ->
                 drawLine(color, p(x, top), p(x, .86f), strokeWidth = stroke.width, cap = StrokeCap.Round)

@@ -77,7 +77,9 @@ fun RulesScreen() {
             )
             if (rules.enabled) {
                 Hint(
-                    "لازم خدمة AutoFare تكون مفعّلة من إعدادات الوصولية، وإذا الهاتف " +
+                    // "إمكانية الوصول" is what the phone's own settings call it;
+                    // "الوصولية" sent the driver looking for a menu that does not exist
+                    "لازم خدمة AutoFare تكون مفعّلة من إعدادات إمكانية الوصول، وإذا الهاتف " +
                         "طفّاها لحالها بعد تحديث التطبيق لازم ترجع تفعّلها.",
                 )
             }
@@ -127,7 +129,8 @@ fun RulesScreen() {
                 Mode.EVERYTHING -> Unit
             }
 
-            Stepper("أقصى وقت للوصول للزبون", rules.maxEtaMin.toString(), "دقايق",
+            Stepper("أقصى وقت للوصول للزبون", rules.maxEtaMin.toString(),
+                jo.autofare.ui.minutesUnit(rules.maxEtaMin),
                 onMinus = { update { it.copy(maxEtaMin = (it.maxEtaMin - 1).coerceAtLeast(1)) } },
                 onPlus = { update { it.copy(maxEtaMin = it.maxEtaMin + 1) } })
 
@@ -143,7 +146,7 @@ fun RulesScreen() {
              * 1.50 four minutes out, a Petra 1.58 one minute out, and a Jeeny 3.43
              * two minutes out.
              */
-            SimRow("1.50 د.أ · الزبون 4 دقايق", 1.50, 4, rules)
+            SimRow("1.50 د.أ · الزبون 4 دقائق", 1.50, 4, rules)
             SimRow("1.58 د.أ · الزبون دقيقة", 1.58, 1, rules)
             SimRow("3.43 د.أ · الزبون دقيقتين", 3.43, 2, rules)
         }
@@ -214,7 +217,7 @@ private fun modeExplainer(mode: Mode) = when (mode) {
     Mode.FLOOR -> "منقبل الطلبات اللي سعرها يساوي الرقم اللي حاططه أو أكثر."
     Mode.BAND -> "منقبل بس الطلبات اللي سعرها بين رقمين — مفيد لو بدك ترفض الرحلات الطويلة كمان."
     Mode.PER_MINUTE -> "بدل ما تحسب السعر لحاله — منقسم السعر ع الوقت. رحلة بـ 4 دنانير والزبون بعيد " +
-        "10 دقايق أسوأ من رحلة بـ 3 دنانير والزبون جنبك."
+        "10 دقائق أسوأ من رحلة بـ 3 دنانير والزبون جنبك."
 }
 
 private fun fmt(v: Double) = String.format(Locale.US, "%.2f", v)

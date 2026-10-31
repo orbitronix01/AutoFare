@@ -2,7 +2,6 @@ package jo.autofare.ui.home
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -11,23 +10,37 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import jo.autofare.service.AutoFareService
+import jo.autofare.data.DETECTED_APPS
+import jo.autofare.data.History
+import jo.autofare.data.RideApp
+import jo.autofare.data.RulesStore
+import jo.autofare.rules.Mode
+import jo.autofare.rules.RuleSet
 import jo.autofare.ui.components.*
 import jo.autofare.ui.motion.Motion
 import jo.autofare.ui.motion.enterProgress
+import jo.autofare.ui.minutes
 import jo.autofare.ui.motion.stagger
+import jo.autofare.ui.rememberHistory
+import jo.autofare.ui.requests
 import jo.autofare.ui.theme.*
+import java.util.Locale
 
 /** Decelerating curve — things arrive quickly then settle. */
 private fun easeOut(x: Float): Float {
@@ -35,26 +48,42 @@ private fun easeOut(x: Float): Float {
     return 1f - (1f - c) * (1f - c) * (1f - c)
 }
 
-private data class Decision(
-    val accepted: Boolean,
-    val title: String,
-    val detail: String,
-    val price: String,
+/** How many slots the sparkline shows, and how wide each one is. */
+private const val SPARK_BUCKETS = 12
+private const val SPARK_BUCKET_MS = 60 * 60 * 1000L
+
+/**
+ * Everything the screen shows, read in one pass.
+ *
+ * One query set per change rather than six, because every figure here comes out
+ * of the same table and recomposition would otherwise hit SQLite repeatedly for
+ * numbers that were all decided at the same instant.
+ */
+private data class HomeData(
+    val today: History.Summary,
+    val week: History.Summary,
+    val spark: List<Double>,
+    val recent: List<History.Row>,
 )
 
-private val sampleDecisions = listOf(
-    Decision(true, "قبلنا — جيني", "تل الرمان ← الصويفية · 4 دقايق · 1.30 للدقيقة", "5.20"),
-    Decision(false, "رفضنا — جيني", "السعر تحت الحد · طلبت 3.00 وإجا 2.10", "2.10"),
-    Decision(true, "قبلنا — بترا رايد", "الجاردنز ← خلدا · دقيقة وحدة للزبون", "4.00"),
-    Decision(false, "رفضنا — جيني", "الزبون بعيد · 11 دقيقة وإنت حاطط 5", "6.80"),
-)
-
-private val sampleHours = listOf(.18f, .32f, .24f, .48f, .40f, .64f, .96f, .72f, .38f, .54f, .28f, .44f)
+/** Dinars, the way the rest of the app prints them. */
+private fun jod(v: Double): String = String.format(Locale.US, "%.2f", v)
 
 @Composable
-fun HomeScreen(onOpenSettings: () -> Unit = {}) {
-    val af = LocalAfColors.current
-    var running by rememberSaveable { mutableStateOf(true) }
+fun HomeScreen() {
+    val data = rememberHistory { h ->
+        val now = System.currentTimeMillis()
+        HomeData(
+            today = h.summary(History.startOfToday(now)),
+            week = h.summary(History.startOfWeek(now)),
+            spark = h.buckets(
+                fromAt = now - SPARK_BUCKETS * SPARK_BUCKET_MS,
+                bucketMs = SPARK_BUCKET_MS,
+                buckets = SPARK_BUCKETS,
+            ),
+            recent = h.recent(4),
+        )
+    }
 
     Column(
         Modifier
@@ -63,80 +92,64 @@ fun HomeScreen(onOpenSettings: () -> Unit = {}) {
             .verticalScroll(rememberScrollState())
             .padding(bottom = 32.dp)
     ) {
-        TopLine(onOpenSettings)
-        ShiftBlock(running = running, onToggle = { running = !running })
+        TopLine()
+        ShiftBlock(data)
 
-        SectionHeader("01", "تقييم اليوم")
-        ScoreBlock()
+        Spacer(Modifier.height(22.dp))
+        ScoreBlock(data)
 
-        SectionHeader("02", "التطبيقات")
+        SectionHeader("01", "التطبيقات")
         Rule()
-        AppRow("Jeeny", "من 3.00 د.أ وفوق · لحد 5 دقايق", Color(0xFF5B3FE8), "J")
-        AppRow("Petra Ride", "ربح بالدقيقة 0.60 د.أ", Color(0xFF0E76CC), "P")
+        AppRows()
 
-        SectionHeader("03", "آخر القرارات")
+        SectionHeader("02", "آخر القرارات")
         Rule()
-        sampleDecisions.forEach { DecisionRow(it) }
+        DecisionList(data?.recent)
 
-        Spacer(Modifier.height(20.dp))
-        AdviceCard()
+        AdviceCard(data)
     }
 }
 
+/** Just the mark. Settings lives in the navigation bar, not up here. */
 @Composable
-private fun TopLine(onOpenSettings: () -> Unit) {
+private fun TopLine() {
     val af = LocalAfColors.current
     Row(
         Modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp)
             .padding(top = 10.dp, bottom = 18.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            androidx.compose.foundation.Image(
-                painter = androidx.compose.ui.res.painterResource(jo.autofare.R.drawable.logo_mark),
-                contentDescription = null,
-                colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(af.ink),
-                modifier = Modifier.height(24.dp),
-            )
-            Spacer(Modifier.width(9.dp))
-            androidx.compose.foundation.Image(
-                painter = androidx.compose.ui.res.painterResource(jo.autofare.R.drawable.logo_word),
-                contentDescription = "AutoFare",
-                colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(af.ink),
-                modifier = Modifier.height(13.dp),
-            )
-        }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("الأحد · 25 تشرين", fontSize = 11.5.sp, color = af.muted)
-            Spacer(Modifier.width(12.dp))
-            Text(
-                "الإعدادات",
-                fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = af.ink,
-                modifier = Modifier.clickable { onOpenSettings() }.padding(vertical = 6.dp),
-            )
-        }
+        androidx.compose.foundation.Image(
+            painter = androidx.compose.ui.res.painterResource(jo.autofare.R.drawable.logo_mark),
+            contentDescription = "AutoFare",
+            colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(af.ink),
+            modifier = Modifier.height(24.dp),
+        )
     }
 }
 
 @Composable
-private fun ShiftBlock(running: Boolean, onToggle: () -> Unit) {
+private fun ShiftBlock(data: HomeData?) {
     val af = LocalAfColors.current
+    val armed = anyAppArmed()
+
     Column(Modifier.padding(horizontal = 20.dp)) {
         Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            StatusBand(if (running) "الدوام شغّال" else "الدوام واقف", running)
-            Text("04:12", fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold, color = af.muted)
+            // the app's own term, not "الدوام" — this band is AutoFare's state,
+            // not the driver's shift, and it matches Reason.OFF word for word
+            StatusBand(if (armed) "القبول التلقائي شغّال" else "القبول التلقائي مطفي", armed)
         }
 
         // the day's take counts up — the one number a driver opens the app for
+        val target = data?.today?.earnings ?: 0.0
         val countUp = enterProgress(durationMillis = Motion.SWEEP)
-        val shown = String.format(java.util.Locale.US, "%.2f", 47.50 * easeOut(countUp))
+        val shown = if (data == null) "—" else jod(target * easeOut(countUp))
 
         Row(
             Modifier.fillMaxWidth().padding(top = 18.dp),
@@ -144,9 +157,6 @@ private fun ShiftBlock(running: Boolean, onToggle: () -> Unit) {
             verticalAlignment = Alignment.Bottom,
         ) {
             Text(shown, style = FigureHuge, color = af.ink)
-            Spacer(Modifier.width(10.dp))
-            Text("د.أ", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = af.muted,
-                modifier = Modifier.padding(bottom = 8.dp))
         }
 
         Row(
@@ -154,28 +164,26 @@ private fun ShiftBlock(running: Boolean, onToggle: () -> Unit) {
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Text("أرباح اليوم", fontSize = 12.sp, color = af.muted)
-            Text("12 رحلة · 9 ساعات", fontSize = 12.sp, color = af.muted)
         }
 
-        Sparkline(Modifier.padding(top = 20.dp))
+        Sparkline(data?.spark, Modifier.padding(top = 20.dp))
 
         Spacer(Modifier.height(20.dp))
         Rule()
         Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
-            Stat("11.4", "د.أ بالساعة", Modifier.weight(1f))
+            Stat(
+                value = data?.today?.perHour?.let { jod(it) } ?: "—",
+                label = "د.أ بالساعة",
+                modifier = Modifier.weight(1f),
+            )
             VRule()
-            Stat("0.9", "ثانية للقبول", Modifier.weight(1f))
-            VRule()
-            Stat("61%", "نسبة القبول", Modifier.weight(1f))
+            Stat(
+                value = data?.today?.acceptRate?.let { "${(it * 100).toInt()}%" } ?: "—",
+                label = "نسبة القبول",
+                modifier = Modifier.weight(1f),
+            )
         }
         Rule()
-
-        PrimaryButton(
-            text = if (running) "وقّف الدوام" else "ابدأ الدوام",
-            filled = running,
-            onClick = onToggle,
-            modifier = Modifier.padding(top = 18.dp),
-        )
     }
 }
 
@@ -192,20 +200,29 @@ private fun Stat(value: String, label: String, modifier: Modifier = Modifier) {
     }
 }
 
-/** Slanted bars — same lean as the logo. */
+/**
+ * Slanted bars — same lean as the logo.
+ *
+ * Scaled against the tallest bar in the window rather than a fixed ceiling, so a
+ * quiet morning still reads as a shape instead of a flat line.
+ */
 @Composable
-private fun Sparkline(modifier: Modifier = Modifier) {
+private fun Sparkline(values: List<Double>?, modifier: Modifier = Modifier) {
     val af = LocalAfColors.current
-    val peak = sampleHours.max()
-    // bars grow out of the baseline, left to right
+    val bars = values ?: List(SPARK_BUCKETS) { 0.0 }
+    val peak = bars.maxOrNull() ?: 0.0
     val t = enterProgress(durationMillis = Motion.ENTER)
+
     Canvas(modifier.fillMaxWidth().height(44.dp)) {
         val gap = 3.dp.toPx()
         val shear = 5.dp.toPx()
-        val barW = (size.width - gap * (sampleHours.size - 1)) / sampleHours.size
-        sampleHours.forEachIndexed { i, v ->
-            val grow = easeOut(stagger(t, i, sampleHours.size))
-            val h = size.height * v * grow
+        val barW = (size.width - gap * (bars.size - 1)) / bars.size
+
+        bars.forEachIndexed { i, v ->
+            val grow = easeOut(stagger(t, i, bars.size))
+            // an empty slot still draws a stub, so the grid of the chart survives
+            val ratio = if (peak <= 0.0) 0.06f else (v / peak).toFloat().coerceAtLeast(0.06f)
+            val h = size.height * ratio * grow
             val x = i * (barW + gap)
             val top = size.height - h
             val path = androidx.compose.ui.graphics.Path().apply {
@@ -215,82 +232,206 @@ private fun Sparkline(modifier: Modifier = Modifier) {
                 lineTo(x, size.height)
                 close()
             }
-            drawPath(path, color = if (v >= peak * 0.7f) af.ink else af.rule2)
+            drawPath(path, color = if (peak > 0 && v >= peak * 0.7) af.ink else af.rule2)
         }
     }
 }
 
+/**
+ * The day's score.
+ *
+ * Deliberately relative to the driver's own week rather than to any absolute
+ * figure: a good hour in Amman is not a good hour everywhere, and the app has no
+ * business inventing a benchmark. 50 means exactly his own average, 100 means
+ * double it. Until there is a week to compare against there is no score, and the
+ * card says so rather than showing a number it cannot justify.
+ */
 @Composable
-private fun ScoreBlock() {
+private fun ScoreBlock(data: HomeData?) {
     val af = LocalAfColors.current
+    val today = data?.today?.perHour
+    val week = data?.week?.perHour
+
+    val score: Int? =
+        if (today != null && week != null && week > 0.0) {
+            ((today / week) * 50).toInt().coerceIn(0, 99)
+        } else null
+
     AfCard(Modifier.padding(horizontal = 20.dp)) {
-    Row(
-        Modifier.fillMaxWidth().padding(18.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        // dial sweeps to the score, and the number counts with it
-        val dial = easeOut(enterProgress(durationMillis = Motion.SWEEP))
-        Box(Modifier.size(78.dp), contentAlignment = Alignment.Center) {
-            Canvas(Modifier.fillMaxSize()) {
-                val stroke = 7.dp.toPx()
-                val inset = stroke / 2
-                val arcSize = Size(size.width - stroke, size.height - stroke)
-                drawArc(
-                    color = af.rule, startAngle = 0f, sweepAngle = 360f, useCenter = false,
-                    topLeft = Offset(inset, inset), size = arcSize,
-                    style = Stroke(width = stroke),
-                )
-                drawArc(
-                    color = af.accept, startAngle = -90f, sweepAngle = 360f * 0.78f * dial,
-                    useCenter = false,
-                    topLeft = Offset(inset, inset), size = arcSize,
-                    style = Stroke(width = stroke, cap = StrokeCap.Round),
+        Row(
+            Modifier.fillMaxWidth().padding(18.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            val dial = easeOut(enterProgress(durationMillis = Motion.SWEEP))
+            Box(Modifier.size(78.dp), contentAlignment = Alignment.Center) {
+                Canvas(Modifier.fillMaxSize()) {
+                    val stroke = 7.dp.toPx()
+                    val inset = stroke / 2
+                    val arcSize = Size(size.width - stroke, size.height - stroke)
+                    drawArc(
+                        color = af.rule, startAngle = 0f, sweepAngle = 360f, useCenter = false,
+                        topLeft = Offset(inset, inset), size = arcSize,
+                        style = Stroke(width = stroke),
+                    )
+                    if (score != null) {
+                        drawArc(
+                            color = af.accept, startAngle = -90f,
+                            sweepAngle = 360f * (score / 100f) * dial,
+                            useCenter = false,
+                            topLeft = Offset(inset, inset), size = arcSize,
+                            style = Stroke(width = stroke, cap = StrokeCap.Round),
+                        )
+                    }
+                }
+                Text(
+                    if (score == null) "—" else "${(score * dial).toInt()}",
+                    style = FigureMedium.copy(fontSize = 25.sp),
+                    color = if (score == null) af.muted else af.ink,
                 )
             }
-            Text("${(78 * dial).toInt()}", style = FigureMedium.copy(fontSize = 25.sp), color = af.ink)
+            Spacer(Modifier.width(18.dp))
+            Column(Modifier.weight(1f)) {
+                val head = when {
+                    score == null -> "لسا بدري"
+                    score >= 70 -> "يوم منيح"
+                    score >= 45 -> "يوم عادي"
+                    else -> "يوم بطيء"
+                }
+                val body = when {
+                    score == null ->
+                        "منحسبلك تقييم اليوم لما يصير عندك شغل أسبوع كامل منقارن عليه."
+                    today != null && week != null && today >= week ->
+                        "ربحك بالساعة اليوم ${jod(today)} د.أ — فوق متوسطك (${jod(week)})."
+                    today != null && week != null ->
+                        "ربحك بالساعة اليوم ${jod(today)} د.أ — تحت متوسطك (${jod(week)})."
+                    else -> ""
+                }
+                Text(head, fontWeight = FontWeight.Bold, fontSize = 14.5.sp, color = af.ink)
+                Spacer(Modifier.height(4.dp))
+                Text(body, fontSize = 11.5.sp, color = af.muted, lineHeight = 19.sp)
+            }
         }
-        Spacer(Modifier.width(18.dp))
-        Column(Modifier.weight(1f)) {
-            Text("يوم منيح", fontWeight = FontWeight.Bold, fontSize = 14.5.sp, color = af.ink)
-            Spacer(Modifier.height(4.dp))
-            Text(
-                "ربحك بالساعة فوق متوسطك. بس ضيّعت 3 طلبات حلوة وإنت بوضع الراحة — جرّب تقصّر الاستراحة.",
-                fontSize = 11.5.sp, color = af.muted, lineHeight = 19.sp,
+    }
+}
+
+/* ───────────────────────── the apps ───────────────────────── */
+
+/**
+ * True only when AutoFare can actually take a ride.
+ *
+ * Both halves are required. A rule being on means nothing if Android has the
+ * accessibility service switched off — and EMUI switches it off after every
+ * install — so a band reading الدوام شغّال off the rules alone tells a driver he
+ * is covered during the exact shift where he is not.
+ */
+@Composable
+private fun anyAppArmed(): Boolean {
+    val context = LocalContext.current
+    val store = remember(context) { RulesStore(context) }
+    var rulesOn by remember { mutableStateOf(false) }
+    var serviceOn by remember { mutableStateOf(AutoFareService.isEnabled(context)) }
+
+    DisposableEffect(store) {
+        rulesOn = DETECTED_APPS.any { store.get(it.id).enabled }
+        val listener = store.observe { rulesOn = DETECTED_APPS.any { store.get(it.id).enabled } }
+        onDispose { store.stopObserving(listener) }
+    }
+
+    // the only way to switch the service on is to leave and come back, so the
+    // value read at first composition is stale precisely when it matters
+    val owner = LocalLifecycleOwner.current
+    DisposableEffect(owner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) serviceOn = AutoFareService.isEnabled(context)
+        }
+        owner.lifecycle.addObserver(observer)
+        onDispose { owner.lifecycle.removeObserver(observer) }
+    }
+
+    return rulesOn && serviceOn
+}
+
+@Composable
+private fun AppRows() {
+    val context = LocalContext.current
+    val store = remember(context) { RulesStore(context) }
+
+    DETECTED_APPS.forEach { app ->
+        key(app.id) {
+            var rules by remember { mutableStateOf(store.get(app.id)) }
+            AppRow(
+                app = app,
+                rules = rules,
+                onToggle = {
+                    // writing straight through: a driver must not be able to leave
+                    // the home toggle in a state the engine has not been told about
+                    rules = rules.copy(enabled = !rules.enabled).also { store.put(app.id, it) }
+                },
             )
         }
     }
-    }
 }
 
 @Composable
-private fun AppRow(name: String, rule: String, badge: Color, letter: String) {
+private fun AppRow(app: RideApp, rules: RuleSet, onToggle: () -> Unit) {
     val af = LocalAfColors.current
-    var on by remember { mutableStateOf(true) }
     Column {
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 15.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
-                Modifier.size(37.dp).background(badge, RoundedCornerShape(10.dp)),
+                Modifier.size(37.dp).background(app.badge, RoundedCornerShape(10.dp)),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(letter, color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
+                Text(app.letter, color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
             }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text(name, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = af.ink)
-                Text(rule, fontSize = 11.5.sp, color = af.muted)
+                Text(app.name, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = af.ink)
+                Text(ruleSummary(rules, app), fontSize = 11.5.sp, color = af.muted)
             }
-            AfSwitch(on) { on = !on }
+            AfSwitch(rules.enabled) { onToggle() }
         }
         Rule()
     }
 }
 
+/** The driver's own rule, said back to him in one line. */
+private fun ruleSummary(r: RuleSet, app: RideApp): String {
+    val eta = "لحد ${minutes(r.maxEtaMin)}"
+    return when (r.mode) {
+        Mode.EVERYTHING -> "كل الطلبات · $eta"
+        Mode.FLOOR -> "من ${jod(r.floor)} ${app.currency} وفوق · $eta"
+        Mode.BAND -> "بين ${jod(r.floor)} و ${jod(r.ceiling)} ${app.currency} · $eta"
+        Mode.PER_MINUTE -> "ربح بالدقيقة ${jod(r.rate)} ${app.currency} · $eta"
+    }
+}
+
+/* ───────────────────────── decisions ───────────────────────── */
+
 @Composable
-private fun DecisionRow(d: Decision) {
+private fun DecisionList(rows: List<History.Row>?) {
     val af = LocalAfColors.current
+    if (rows == null) return
+    if (rows.isEmpty()) {
+        Text(
+            "لساته ما إجا ولا طلب. شغّل تطبيق الرحلات وخلّي AutoFare شغّال.",
+            fontSize = 12.sp, color = af.muted, lineHeight = 20.sp,
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp),
+        )
+        Rule()
+        return
+    }
+    rows.forEach { DecisionRow(it) }
+}
+
+@Composable
+private fun DecisionRow(row: History.Row) {
+    val af = LocalAfColors.current
+    val app = DETECTED_APPS.firstOrNull { it.packageName == row.pkg }
+    val appName = app?.name ?: row.pkg
+
     Column {
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp),
@@ -300,37 +441,82 @@ private fun DecisionRow(d: Decision) {
                 Modifier
                     .width(4.dp)
                     .height(34.dp)
-                    .background(if (d.accepted) af.accept else af.rule2, RoundedCornerShape(3.dp))
+                    .background(if (row.accepted) af.accept else af.rule2, RoundedCornerShape(3.dp))
             )
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text(d.title, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = af.ink)
+                Text(
+                    (if (row.accepted) "قبلنا — " else "رفضنا — ") + appName,
+                    fontWeight = FontWeight.Bold, fontSize = 13.sp, color = af.ink,
+                )
                 Spacer(Modifier.height(3.dp))
-                Text(d.detail, fontSize = 11.5.sp, color = af.muted, lineHeight = 17.sp)
+                Text(detail(row), fontSize = 11.5.sp, color = af.muted, lineHeight = 17.sp)
             }
             Spacer(Modifier.width(10.dp))
             Text(
-                d.price,
+                row.fare?.let { jod(it) } ?: "—",
                 fontWeight = FontWeight.ExtraBold, fontSize = 15.sp,
-                color = if (d.accepted) af.ink else af.rule2,
+                color = if (row.accepted) af.ink else af.rule2,
             )
         }
         Rule()
     }
 }
 
+/** The one line under a decision: the route when known, the reason when not. */
+private fun detail(row: History.Row): String {
+    val bits = ArrayList<String>(3)
+
+    val route = listOfNotNull(row.pickup, row.dropoff)
+    if (route.size == 2) bits += "${route[0]} ← ${route[1]}"
+
+    row.etaMin?.let { bits += minutes(it) }
+    row.perMinute?.let { bits += "${jod(it)} للدقيقة" }
+
+    // a refusal explains itself; the Reason enum already carries its own Arabic
+    if (!row.accepted) {
+        row.reason
+            ?.let { name -> runCatching { jo.autofare.rules.Reason.valueOf(name).ar }.getOrNull() }
+            ?.let { bits.add(0, it) }
+    }
+
+    return if (bits.isEmpty()) "—" else bits.joinToString(" · ")
+}
+
+/**
+ * The one-line read on the day.
+ *
+ * Hidden entirely when there is nothing to say. An advice card that invents a
+ * comparison is worse than no card.
+ */
 @Composable
-private fun AdviceCard() {
+private fun AdviceCard(data: HomeData?) {
     val af = LocalAfColors.current
+    val today = data?.today ?: return
+    if (today.seen == 0) return
+
+    val refused = today.seen - today.accepted
+    val line = buildString {
+        append("من الصبح شفنا ${requests(today.seen)}")
+        if (refused > 0) append(" ورفضنا $refused")
+        append(".")
+        val t = today.perHour
+        val w = data.week.perHour
+        if (t != null && w != null && w > 0) {
+            val pct = (((t - w) / w) * 100).toInt()
+            if (pct != 0) {
+                append(if (pct > 0) " ربحك بالساعة أعلى $pct% من متوسطك."
+                       else " ربحك بالساعة أقل ${-pct}% من متوسطك.")
+            }
+        }
+    }
+
+    Spacer(Modifier.height(20.dp))
     AfCard(Modifier.padding(horizontal = 20.dp)) {
         Row(Modifier.fillMaxWidth().padding(16.dp)) {
             SpeedLines(af.ink, Modifier.padding(top = 4.dp))
             Spacer(Modifier.width(12.dp))
-            Text(
-                "من الصبح رفضنا 14 طلب كانوا بيضيّعوا عليك وقت. ربحك بالساعة أعلى 18% من أمس.",
-                fontSize = 12.5.sp, color = af.ink2, lineHeight = 23.sp,
-            )
+            Text(line, fontSize = 12.5.sp, color = af.ink2, lineHeight = 23.sp)
         }
     }
 }
-

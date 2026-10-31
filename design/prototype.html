@@ -183,6 +183,10 @@ html[data-theme="dark"] .band{color:#0C1A14}
 .band.off{background:var(--flag)}
 .band .pip{width:6px;height:6px;border-radius:50%;background:currentColor}
 
+/* header settings gear — padded out to a 40px target, drawn at 20 */
+.gear{background:none;border:0;padding:10px;margin:-10px;color:var(--ink);cursor:pointer;display:flex;border-radius:50%}
+.gear:hover{background:var(--rule)}
+
 .figure{display:flex;align-items:baseline;gap:10px;direction:ltr;justify-content:flex-end;margin:18px 0 0}
 .figure b{font-family:'Archivo';font-weight:900;font-size:68px;line-height:.86;letter-spacing:-.05em;font-variant-numeric:tabular-nums}
 .figure i{font-style:normal;font-family:'Archivo';font-size:16px;font-weight:700;color:var(--muted)}
@@ -508,7 +512,6 @@ body.flat .notch{display:none}
 <div class="picker" role="tablist">
   <button role="tab" aria-selected="true" data-go="home">الرئيسية</button>
   <button role="tab" aria-selected="false" data-go="rules">قواعد القبول</button>
-  <button role="tab" aria-selected="false" data-go="smart">الأوضاع الذكية</button>
   <button role="tab" aria-selected="false" data-go="stats">الإحصائيات</button>
   <button role="tab" aria-selected="false" data-go="settings">الإعدادات</button>
   <button role="tab" aria-selected="false" data-go="learn">وضع التعلّم</button>
@@ -610,23 +613,26 @@ body.flat .notch{display:none}
     <section class="screen active" id="home">
       <div class="topline">
         <div class="bm">
-          <img class="mk" src="assets/logo-mark.png" alt="">
-          <img class="wd" src="assets/logo-word.png" alt="AutoFare">
+          <img class="mk" src="assets/logo-mark.png" alt="AutoFare">
         </div>
-        <div style="display:flex;align-items:center;gap:12px">
-          <span class="dt">الأحد · 25 تشرين</span>
-          <button class="backlink" style="font-size:11.5px;padding:6px 0" data-go="settings">الإعدادات</button>
-        </div>
+        <button class="gear" data-go="settings" aria-label="الإعدادات">
+          <svg viewBox="0 0 20 20" width="20" height="20" fill="none" stroke="currentColor"
+               stroke-width="1.7" stroke-linecap="round">
+            <circle cx="10" cy="10" r="6"/><circle cx="10" cy="10" r="2.2"/>
+            <g><path d="M10 3.2V1.1"/><path d="M10 18.9v-2.1"/><path d="M16.8 10h2.1"/><path d="M1.1 10h2.1"/>
+               <path d="M14.8 5.2l1.5-1.5"/><path d="M3.7 16.3l1.5-1.5"/>
+               <path d="M14.8 14.8l1.5 1.5"/><path d="M3.7 3.7l1.5 1.5"/></g>
+          </svg>
+        </button>
       </div>
 
       <div class="shift">
         <div class="row">
           <span class="band slant" id="band"><span class="unslant" style="display:flex;align-items:center;gap:7px"><i class="pip"></i><span id="bandTxt">الدوام شغّال</span></span></span>
-          <span class="n" style="font-size:12.5px;color:var(--muted);font-weight:600">04:12</span>
         </div>
 
-        <div class="figure"><i>د.أ</i><b id="money">47.50</b></div>
-        <div class="figcap"><span>أرباح اليوم</span><span>12 رحلة · 9 ساعات</span></div>
+        <div class="figure"><b id="money">47.50</b></div>
+        <div class="figcap"><span>أرباح اليوم</span></div>
 
         <div class="sparkline">
           <i style="height:18%"></i><i style="height:32%"></i><i style="height:24%"></i><i style="height:48%"></i>
@@ -636,15 +642,13 @@ body.flat .notch{display:none}
 
         <div class="trio">
           <div><b>11.4</b><span>د.أ بالساعة</span></div>
-          <div><b>0.9</b><span>ثانية للقبول</span></div>
           <div><b>61%</b><span>نسبة القبول</span></div>
         </div>
 
         <button class="btn lg" id="power" style="margin-top:18px">وقّف الدوام</button>
       </div>
 
-      <div class="sec"><span class="ix">01</span><span class="lb">تقييم اليوم</span></div>
-      <div class="score">
+      <div class="score" style="margin-top:22px">
         <div class="dial">
           <svg viewBox="0 0 80 80">
             <circle cx="40" cy="40" r="34" fill="none" stroke="var(--rule)" stroke-width="7"/>
@@ -659,7 +663,7 @@ body.flat .notch{display:none}
         </div>
       </div>
 
-      <div class="sec"><span class="ix">02</span><span class="lb">التطبيقات</span></div>
+      <div class="sec"><span class="ix">01</span><span class="lb">التطبيقات</span></div>
       <div class="app">
         <div class="sq j">J</div>
         <div class="gro"><b>Jeeny</b><span>من 3.00 د.أ وفوق · لحد 5 دقايق</span></div>
@@ -671,7 +675,7 @@ body.flat .notch{display:none}
         <div class="sw on" data-sw></div>
       </div>
 
-      <div class="sec"><span class="ix">03</span><span class="lb">آخر القرارات</span></div>
+      <div class="sec"><span class="ix">02</span><span class="lb">آخر القرارات</span></div>
       <div class="dec">
         <div class="vd y"></div>
         <div class="gro"><b>قبلنا — جيني</b><p>تل الرمان ← الصويفية · 4 دقايق · 1.30 للدقيقة</p></div>
@@ -786,71 +790,6 @@ body.flat .notch{display:none}
       </div>
 
       <p class="hint" style="padding:18px 20px 0">القواعد تُحفظ لحالها — ما في زر حفظ.</p>
-    </section>
-
-    <!-- ══════ SMART ══════ -->
-    <section class="screen" id="smart">
-      <div class="topline">
-        <div><h1 class="ttl">الأوضاع الذكية</h1><p class="dek">القواعد بتتغيّر لحالها حسب الوقت وشو ناقصك.</p></div>
-        <div class="speed"><i></i><i></i><i></i></div>
-      </div>
-
-      <div class="sec"><span class="ix">01</span><span class="lb">هدف اليوم</span></div>
-      <div class="panel">
-        <div class="row">
-          <div style="flex:1"><b style="font-size:14.5px">بدي أجمّع اليوم</b><p class="dek" style="margin-top:5px">كل ما تقرّب ع الهدف منصير أصعب بالقبول. وإذا متأخر منخفّف شوي.</p></div>
-          <div class="sw on" data-sw></div>
-        </div>
-        <div class="stp">
-          <div class="stpc">
-            <button data-step="-" data-t="goal">−</button>
-            <div class="stpv"><b id="goalVal">60</b><span>د.أ</span></div>
-            <button data-step="+" data-t="goal">+</button>
-          </div>
-        </div>
-        <div class="goal"><i style="width:79%"></i></div>
-        <div class="row" style="margin-top:10px">
-          <span class="dek" id="goalGot">وصلت 47.50 من 60</span>
-          <span style="font-size:12.5px;font-weight:700" id="goalLeft">باقي 12.50</span>
-        </div>
-      </div>
-
-      <div class="sec"><span class="ix">02</span><span class="lb">أوقات الشغل</span></div>
-      <div class="prof live">
-        <div class="tm">16:00<br>20:00</div>
-        <div class="gro"><b>ذروة العصر</b><span>ربح بالدقيقة 0.75 · لحد 4 دقايق</span></div>
-        <div class="now"><span>شغّال</span></div>
-      </div>
-      <div class="prof">
-        <div class="tm">20:00<br>01:00</div>
-        <div class="gro"><b>سهرة</b><span>ربح بالدقيقة 0.60 · لحد 7 دقايق</span></div>
-        <div class="sw on" data-sw></div>
-      </div>
-      <div class="prof">
-        <div class="tm">06:00<br>10:00</div>
-        <div class="gro"><b>دوام الصبح</b><span>من سعر وفوق 3.50 د.أ</span></div>
-        <div class="sw" data-sw></div>
-      </div>
-      <div style="padding:14px 20px 0"><button class="btn ghost">+ ضيف وقت جديد</button></div>
-
-      <div class="sec"><span class="ix">03</span><span class="lb">الرجوع ع البيت</span></div>
-      <div class="panel">
-        <div class="row">
-          <div style="flex:1"><b style="font-size:14.5px">خلص دوامي — ردّني ع البيت</b><p class="dek" style="margin-top:5px">منقبل بس الرحلات الرايحة ع جهة بيتك. بترجع وإنت كاسب بدل ما ترجع فاضي.</p></div>
-          <div class="sw" data-sw></div>
-        </div>
-        <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--rule)" class="row">
-          <div><b style="font-size:13px">بيتي</b><div class="dek" style="margin-top:2px">صويلح · شارع الأردن</div></div>
-          <button style="background:none;border:0;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;color:var(--ink);text-decoration:underline">غيّر</button>
-        </div>
-      </div>
-
-      <div class="sec"><span class="ix">04</span><span class="lb">مناطق ما بدي إياها</span></div>
-      <div class="panel">
-        <p class="dek">ما منقبل أي طلب زبونه بهالمناطق:</p>
-        <div class="tags"><span>وسط البلد ✕</span><span>الهاشمي ✕</span></div>
-        <div class="tags"><span class="add">+ ضيف منطقة</span></div>
-      </div>
     </section>
 
     <!-- ══════ STATS ══════ -->
@@ -1052,9 +991,6 @@ body.flat .notch{display:none}
     </button>
     <button aria-selected="false" data-go="rules">
       <span class="ind"><svg viewBox="0 0 24 24"><path d="M5 6h14M5 12h14M5 18h14"/><path d="M9 4v4M15 10v4M8 16v4"/></svg></span>القواعد
-    </button>
-    <button aria-selected="false" data-go="smart">
-      <span class="ind"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></span>الأوضاع
     </button>
     <button aria-selected="false" data-go="stats">
       <span class="ind"><svg viewBox="0 0 24 24"><path d="M4 20V11M10 20V4M16 20v-6M22 20H2"/></svg></span>الإحصائيات
@@ -1270,21 +1206,6 @@ document.querySelectorAll('#appTabs button').forEach((b, i) =>
 document.querySelectorAll('#modeTabs button').forEach((b, i) =>
   b.addEventListener('click', () => { liveRules().mode = i; renderRules(); }));
 renderRules();
-
-/* ═══════════════ SMART — the day's goal ═══════════════ */
-let goal = 60;
-const EARNED = 47.50;
-document.querySelectorAll('#smart [data-step]').forEach(btn => {
-  btn.addEventListener('click', () => {
-    goal = btn.dataset.step === '+' ? goal + 5 : Math.max(5, goal - 5);
-    document.getElementById('goalVal').textContent = String(goal);
-    document.querySelector('#smart .goal i').style.width =
-      Math.min(100, EARNED / goal * 100).toFixed(1) + '%';
-    document.getElementById('goalGot').textContent = 'وصلت 47.50 من ' + goal;
-    document.getElementById('goalLeft').textContent =
-      'باقي ' + Math.max(0, goal - EARNED).toFixed(2);
-  });
-});
 
 /* ═══════════════ ONBOARDING — the three steps from OnboardingScreen.kt ═══════════════ */
 const OB_STEPS = [

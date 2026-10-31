@@ -30,14 +30,20 @@ import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import jo.autofare.ui.theme.*
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
 
 /* ───────────────────────── structure ───────────────────────── */
 
@@ -152,6 +158,43 @@ private fun DrawScope.drawSpeedLines(color: Color) {
             }
             drawPath(p, color = color, alpha = alpha)
         }
+}
+
+/**
+ * Settings gear, drawn rather than imported for the same reason the tab icons
+ * are: one stroke weight across the whole app. Shares `drawTabIcon`'s ratio of
+ * 0.085 × size with round caps, so it sits beside them without looking borrowed.
+ */
+@Composable
+fun GearIcon(color: Color, modifier: Modifier = Modifier, size: Int = 20) {
+    Canvas(modifier.size(size.dp)) { drawGear(color) }
+}
+
+/** Shared with the navigation bar, so the tab icon and the glyph are one drawing. */
+internal fun DrawScope.drawGear(color: Color) {
+    val s = size.minDimension
+    val w = s * 0.085f
+    val c = Offset(s / 2f, s / 2f)
+
+    // body, then a hub small enough to read as a hole at 20dp
+    drawCircle(color, radius = s * 0.30f, center = c, style = Stroke(width = w))
+    drawCircle(color, radius = s * 0.11f, center = c, style = Stroke(width = w))
+
+    // eight teeth as short radial spurs — cheaper to read than a toothed outline
+    val inner = s * 0.34f
+    val outer = s * 0.46f
+    repeat(8) { i ->
+        val a = (PI / 4.0) * i
+        val dx = cos(a).toFloat()
+        val dy = sin(a).toFloat()
+        drawLine(
+            color,
+            Offset(c.x + dx * inner, c.y + dy * inner),
+            Offset(c.x + dx * outer, c.y + dy * outer),
+            strokeWidth = w,
+            cap = StrokeCap.Round,
+        )
+    }
 }
 
 /** Status band — an M3 surface carrying the shift state. */

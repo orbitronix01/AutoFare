@@ -60,6 +60,9 @@ android {
 
     buildFeatures {
         compose = true
+        // off by default since AGP 8; the settings screen reads VERSION_NAME
+        // from it rather than carrying a hand-typed version that goes stale
+        buildConfig = true
     }
 }
 
