@@ -19,6 +19,8 @@ import jo.autofare.data.RulesStore
 import jo.autofare.data.SUPPORTED
 import jo.autofare.detect.DETECTORS
 import jo.autofare.detect.OfferHints
+import jo.autofare.rules.Decision
+import jo.autofare.rules.Reason
 import jo.autofare.rules.RuleSet
 import java.util.Date
 
@@ -67,6 +69,7 @@ class AutoFareService : AccessibilityService() {
     private lateinit var prefs: AppPrefs
     private lateinit var store: CaptureStore
     private lateinit var notifier: LearnNotifier
+    private lateinit var accepts: AcceptNotifier
 
     private lateinit var rulesStore: RulesStore
     private lateinit var licenseStore: LicenseStore
@@ -94,6 +97,20 @@ class AutoFareService : AccessibilityService() {
      */
     @Volatile private var paidUntil = 0L
 
+    /**
+     * Today's tally for the shade line, kept in memory.
+     *
+     * Seeded from the database once at connect and incremented after each press,
+     * rather than re-querying per accept: the log callback runs on this service's
+     * main thread, and a SQLite aggregate there delays the *next* offer.
+     */
+    private var acceptedToday = 0
+    private var earningsToday = 0.0
+
+    /** Rate-limits the "cannot accept" alert so a busy junction cannot spam him. */
+    private var lastAlertAt = 0L
+    private var lastAlertReason: Reason? = null
+
     private var rulesListener: SharedPreferences.OnSharedPreferenceChangeListener? = null
     private var licenseListener: SharedPreferences.OnSharedPreferenceChangeListener? = null
 
@@ -118,6 +135,7 @@ class AutoFareService : AccessibilityService() {
         prefs = AppPrefs(this)
         store = CaptureStore(this)
         notifier = LearnNotifier(this)
+        accepts = AcceptNotifier(this)
 
         rulesStore = RulesStore(this)
         licenseStore = LicenseStore(this)
@@ -130,17 +148,24 @@ class AutoFareService : AccessibilityService() {
                 // in-memory, for "what did it just do"; on disk, for the stats screens
                 DecisionLog.add(outcome, at)
                 history.record(outcome, at)
+                onDecision(outcome, at)
             },
             paid = { System.currentTimeMillis() < paidUntil },
         )
         loadRules()
         loadLicense()
+        seedTodayTally()
         rulesListener = rulesStore.observe {
             loadRules()
             // a rule change makes every earlier decision irrelevant
             auto.reset()
+            showStatus()
         }
-        licenseListener = licenseStore.observe { loadLicense() }
+        licenseListener = licenseStore.observe {
+            loadLicense()
+            showStatus()
+        }
+        showStatus()
 
         running = true
         epoch = prefs.captureEpoch
@@ -154,6 +179,9 @@ class AutoFareService : AccessibilityService() {
         rulesListener?.let { rulesStore.stopObserving(it) }
         licenseListener?.let { licenseStore.stopObserving(it) }
         if (::notifier.isInitialized) notifier.hide()
+        // the line vanishing is the driver's signal that we were killed, but on an
+        // orderly shutdown clear it ourselves rather than leave a lie in the shade
+        if (::accepts.isInitialized) accepts.hide()
         super.onDestroy()
     }
 
@@ -184,6 +212,58 @@ class AutoFareService : AccessibilityService() {
             is License.State.Active -> licenseStore.expiresAt
             else -> 0L
         }
+    }
+
+    /** Read today's totals once, so a restart mid-shift does not show him a zero. */
+    private fun seedTodayTally() {
+        runCatching {
+            val s = history.summary(History.startOfToday())
+            acceptedToday = s.accepted
+            earningsToday = s.earnings
+        }
+    }
+
+    /**
+     * True only when an offer arriving now would actually be pressed.
+     *
+     * The same three conditions the Home band reports. The service cannot be
+     * running and switched off at once, so [armed] and the subscription are all
+     * that is left to check here.
+     */
+    private fun canAccept(): Boolean = armed && System.currentTimeMillis() < paidUntil
+
+    private fun showStatus() {
+        if (::accepts.isInitialized) {
+            accepts.showStatus(canAccept(), acceptedToday, earningsToday)
+        }
+    }
+
+    /**
+     * Everything the driver should hear about a decision, done after the press.
+     *
+     * He is inside Jeeny or Petra while this runs, so the shade is the only place
+     * any of it can reach him.
+     */
+    private fun onDecision(outcome: AutoAccept.Outcome, at: Long) {
+        if (outcome.pressed) {
+            acceptedToday++
+            earningsToday += outcome.offer.fare ?: 0.0
+            showStatus()
+            return
+        }
+
+        /*
+         * A refusal that is the rules working as asked is not news — he set those
+         * rules. A refusal because the app *cannot* accept at all is, and it is
+         * the one he will otherwise discover at the end of a wasted shift.
+         */
+        val reason = (outcome.decision as? Decision.Skip)?.reason ?: return
+        if (reason != Reason.UNPAID && reason != Reason.OFF) return
+
+        if (reason == lastAlertReason && at - lastAlertAt < ALERT_COOLDOWN_MS) return
+        lastAlertReason = reason
+        lastAlertAt = at
+        accepts.alertCannotAccept(reason.ar)
     }
 
     override fun onInterrupt() {}
@@ -535,6 +615,15 @@ class AutoFareService : AccessibilityService() {
 
         /** The driver should see the count move, not watch it tick. */
         private const val NOTIFY_EVERY_MS = 3_000L
+
+        /**
+         * How long before the same "cannot accept" alert may fire again.
+         *
+         * Offers arrive in clusters at a busy junction, and one alert per refused
+         * offer would be a phone buzzing in his hand while he drives. Five minutes
+         * is often enough to be noticed and rare enough to be ignorable.
+         */
+        private const val ALERT_COOLDOWN_MS = 5 * 60 * 1000L
 
         /** Lock screen, launcher, keyboard, share sheet — no offer ever lives here. */
         private val NOISE = setOf(
