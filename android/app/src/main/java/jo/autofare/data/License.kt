@@ -74,9 +74,6 @@ object License {
         Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
             ?: "unknown"
 
-    /** The first eight characters, upper case — what the portal lists phones by. */
-    fun shortDeviceId(context: Context): String = deviceId(context).take(8).uppercase()
-
     /** The developer skip on the lock screen. Debug builds only; a release ignores the flag. */
     fun bypassed(store: LicenseStore): Boolean = BuildConfig.DEBUG && store.devBypass
 

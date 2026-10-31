@@ -20,7 +20,6 @@ import jo.autofare.data.License
 import jo.autofare.ui.arNum
 import jo.autofare.data.LicenseStore
 import jo.autofare.ui.license.CodeEntry
-import jo.autofare.ui.license.DeviceIdLine
 import jo.autofare.ui.theme.FigureLarge
 import jo.autofare.ui.theme.LocalAfColors
 import java.util.Calendar
@@ -87,9 +86,6 @@ fun SubscriptionCard() {
             }
             Spacer(Modifier.height(10.dp))
             CodeEntry(cta = "جدّد الاشتراك")
-
-            Spacer(Modifier.height(16.dp))
-            DeviceIdLine()
 
             // License.bypassed is already false outside debug; checked here as well
             // so this block cannot ship even if that ever changes

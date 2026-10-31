@@ -16,11 +16,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -112,9 +110,6 @@ fun LockScreen(state: License.State, checking: Boolean, onRetry: () -> Unit) {
 
         CodeEntry(cta = "فعّل")
 
-        Spacer(Modifier.height(26.dp))
-        DeviceIdLine()
-
         if (BuildConfig.DEBUG) {
             Text(
                 "تخطّى القفل (نسخة المطوّر بس)",
@@ -196,33 +191,4 @@ fun CodeEntry(cta: String) {
         textAlign = TextAlign.Center,
         modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
     )
-}
-
-/** The phone's short id, which support looks the driver up by. */
-@Composable
-fun DeviceIdLine() {
-    val af = LocalAfColors.current
-    val context = LocalContext.current
-    val clipboard = LocalClipboardManager.current
-    val id = remember(context) { License.shortDeviceId(context) }
-    var copied by remember { mutableStateOf(false) }
-
-    Surface(color = af.sunk, shape = MaterialTheme.shapes.small, modifier = Modifier.fillMaxWidth()) {
-        Row(
-            Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text("رقم الجهاز", fontSize = 12.sp, color = af.muted)
-            Text(id, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = af.ink, letterSpacing = 1.sp)
-            Text(
-                if (copied) "انتسخ" else "انسخ",
-                fontSize = 12.sp, fontWeight = FontWeight.Bold, color = af.ink,
-                modifier = Modifier.clickable {
-                    clipboard.setText(AnnotatedString(id))
-                    copied = true
-                },
-            )
-        }
-    }
 }
