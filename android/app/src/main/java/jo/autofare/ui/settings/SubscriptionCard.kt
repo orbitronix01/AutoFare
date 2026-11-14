@@ -19,7 +19,6 @@ import jo.autofare.BuildConfig
 import jo.autofare.data.License
 import jo.autofare.ui.arNum
 import jo.autofare.data.LicenseStore
-import jo.autofare.ui.license.CodeEntry
 import jo.autofare.ui.theme.FigureLarge
 import jo.autofare.ui.theme.LocalAfColors
 import java.util.Calendar
@@ -71,21 +70,24 @@ fun SubscriptionCard() {
             }
 
             Spacer(Modifier.height(18.dp))
-            Text("عندك رمز جديد؟", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = af.ink)
-            Spacer(Modifier.height(4.dp))
             /*
-             * The price on its own line, in its own nodes. Inside the button as
-             * "جدّد — ٥ د.أ بالشهر" the dash, the figure and the currency's dot
-             * were all neutral or weak characters between Arabic words, and the
-             * line rendered in an order nobody wrote.
+             * One code per phone: renewing happens on our side and the phone
+             * picks it up by itself, so there is no code box here any more.
+             *
+             * The price on its own line, in its own nodes. Inside a sentence the
+             * figure and the currency's dot are weak characters between Arabic
+             * words and render in an order nobody wrote.
              */
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("الاشتراك ", fontSize = 12.sp, color = af.muted)
                 Text(arNum(5), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = af.ink)
-                Text(" د.أ بالشهر. كل رمز بيزيد على المدّة اللي ضايلة.", fontSize = 12.sp, color = af.muted)
+                Text(" د.أ بالشهر.", fontSize = 12.sp, color = af.muted)
             }
-            Spacer(Modifier.height(10.dp))
-            CodeEntry(cta = "جدّد الاشتراك")
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "للتجديد تواصل معنا، وبيتجدّد اشتراكك لحاله بدون ما تكتب أي رمز.",
+                fontSize = 12.sp, color = af.muted, lineHeight = 20.sp,
+            )
 
             // License.bypassed is already false outside debug; checked here as well
             // so this block cannot ship even if that ever changes

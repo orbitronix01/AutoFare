@@ -42,7 +42,7 @@ private data class Copy(val headline: String, val body: String)
 private fun copyFor(state: License.State): Copy = when (state) {
     License.State.Expired -> Copy(
         "خلص\nالاشتراك",
-        "اكتب رمز جديد، وبنرجع نقبل الطلبات عنك.",
+        "تواصل معنا لتجدّد اشتراكك. بس نجدّده، بيرجع AutoFare يشتغل لحاله بدون ما تكتب أي رمز.",
     )
     License.State.Unverified -> Copy(
         "لازم\nإنترنت",
@@ -50,7 +50,7 @@ private fun copyFor(state: License.State): Copy = when (state) {
     )
     else -> Copy(
         "فعّل\nاشتراكك",
-        "اكتب رمز الاشتراك اللي وصلك. كل رمز بيزيد شهر أو أكثر على اشتراكك.",
+        "اكتب الرمز اللي وصلك. بتكتبه مرة وحدة بس، وبيضل مربوط بهاد الجهاز.",
     )
 }
 
@@ -103,12 +103,20 @@ fun LockScreen(state: License.State, checking: Boolean, onRetry: () -> Unit) {
 
         Spacer(Modifier.height(30.dp))
 
-        if (state == License.State.Unverified) {
-            PrimaryButton(text = "جرّب كمان مرة", onClick = onRetry, filled = true)
+        /*
+         * One code per phone. Only a phone that has never been activated asks
+         * for it; an expired or unreachable one waits for the renewal, which
+         * happens on our side, and offers a fresh check instead.
+         */
+        if (state == License.State.None) {
+            CodeEntry(cta = "فعّل")
+        } else {
+            PrimaryButton(
+                text = if (state == License.State.Expired) "تجدّد؟ تأكّد هلّق" else "جرّب كمان مرة",
+                onClick = onRetry, filled = true,
+            )
             Spacer(Modifier.height(22.dp))
         }
-
-        CodeEntry(cta = "فعّل")
 
         if (BuildConfig.DEBUG) {
             Text(
