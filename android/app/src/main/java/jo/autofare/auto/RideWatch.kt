@@ -42,6 +42,12 @@ class RideWatch(private val now: () -> Long) {
         started = false
     }
 
+    /** Stop following once the ride is old enough to have happened, app on screen or not. */
+    fun expireIfOld() {
+        val r = ride ?: return
+        if (now() - r.since > FOLLOW_MS) stop()
+    }
+
     fun stop() {
         ride = null
         started = false

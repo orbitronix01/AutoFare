@@ -323,6 +323,7 @@ class AutoFareService : AccessibilityService() {
     override fun onDestroy() {
         running = false
         timer.removeCallbacks(licenseTick)
+        timer.removeCallbacks(rideTick)
         rulesListener?.let { rulesStore.stopObserving(it) }
         licenseListener?.let { licenseStore.stopObserving(it) }
         prefsListener?.let { prefs.stopObserving(it) }
@@ -476,6 +477,7 @@ class AutoFareService : AccessibilityService() {
             acceptedToday++
             earningsToday += outcome.offer.fare ?: 0.0
             rideWatch.follow(outcome.offer.pkg, at, outcome.offer.fare, outcome.offer.etaMin)
+            startRideTick()
             showStatus()
             val offer = outcome.offer
             val tookMs = outcome.tookMs
@@ -694,6 +696,29 @@ class AutoFareService : AccessibilityService() {
         // "trip started" screen is skipped; Jeeny walks its tree, so it is paced
         if (ride.pkg != RideWatch.PETRA && now - lastWatchAt < WATCH_EVERY_MS) return
         lastWatchAt = now
+        checkRide()
+    }
+
+    /*
+     * A screen that sits still sends no events — Jeeny's home screen after a
+     * cancel is exactly that — so a followed ride is also looked at on a timer.
+     */
+    private val rideTick = object : Runnable {
+        override fun run() {
+            rideWatch.expireIfOld()
+            if (rideWatch.ride == null) return
+            checkRide()
+            if (rideWatch.ride != null) timer.postDelayed(this, RIDE_TICK_MS)
+        }
+    }
+
+    private fun startRideTick() {
+        timer.removeCallbacks(rideTick)
+        timer.postDelayed(rideTick, RIDE_TICK_MS)
+    }
+
+    private fun checkRide() {
+        val ride = rideWatch.ride ?: return
 
         val root = runCatching {
             rootInActiveWindow?.takeIf { it.packageName?.toString() == ride.pkg } ?: windowRootFor(ride.pkg)
@@ -913,6 +938,9 @@ class AutoFareService : AccessibilityService() {
 
         /** How often a followed ride's screen is looked at. */
         private const val WATCH_EVERY_MS = 1_000L
+
+        /** How often a followed ride is checked when its app is quiet. */
+        private const val RIDE_TICK_MS = 3_000L
 
         /** Don't walk the tree more than this often on content changes. */
         private const val WALK_FLOOR_MS = 250L
