@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { supabase, unwrap, fmtDate, fmtDateTime, daysLeft, prettyCode, isForever } from "../supabase.js";
-import { PageHead, Seg, SearchBox, Modal, Avatar, Icon, Empty } from "../ui.jsx";
+import { PageHead, Seg, SearchBox, Modal, Avatar, Icon, Empty, Confirm } from "../ui.jsx";
 import { CodeDetail, RenewModal } from "./Codes.jsx";
 
 // the same short form the app shows the driver under "رقم الجهاز"
@@ -130,6 +130,8 @@ function StatusPill({ st }) {
 
 function DeviceDetail({ d, codes, isOwner, onClose, onChanged }) {
   const [renewing, setRenewing] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const [error, setError] = useState(null);
   const [code, setCode] = useState(null);
   const latest = [...codes].sort((a, b) => (b.redeemed_at ?? b.created_at).localeCompare(a.redeemed_at ?? a.created_at));
 
@@ -137,6 +139,24 @@ function DeviceDetail({ d, codes, isOwner, onClose, onChanged }) {
   if (renewing)
     return <RenewModal phone={d.device_id} customer={latest[0]?.customer} isOwner={isOwner} onClose={() => { onClose(); onChanged(); }} />;
   if (code) return <CodeDetail c={code} isOwner={isOwner} onClose={onClose} onChanged={onChanged} />;
+
+  if (removing)
+    return (
+      <Confirm
+        title={`Remove access for phone ${shortId(d.device_id)}?`}
+        body="AutoFare on this phone stops accepting rides within 5 minutes, or as soon as the driver opens the app. To give access back, use Renew; the new code's months start from today."
+        yes="Remove access"
+        danger
+        onClose={onClose}
+        onYes={async () => {
+          const { error } = await supabase.rpc("remove_access", { p_device_id: d.device_id });
+          if (!error) return onChanged();
+          setError(error.message);
+          setRemoving(false);
+          return true;
+        }}
+      />
+    );
 
   return (
     <Modal title={`Phone ${shortId(d.device_id)}`} subtitle={isForever(d.expires_at) ? "Forever" : `${status(d) === "expired" ? "Ended" : "Ends"} ${fmtDate(d.expires_at)}`} onClose={onClose} wide>
@@ -164,7 +184,13 @@ function DeviceDetail({ d, codes, isOwner, onClose, onChanged }) {
           ))}
         </div>
       )}
+      {error && <p className="error">{error}</p>}
       <div className="modal-foot">
+        {status(d) !== "expired" && (
+          <button className="btn ghost" style={{ color: "var(--danger)", marginRight: "auto" }} onClick={() => setRemoving(true)}>
+            <Icon name="trash" size={15} /> Remove access
+          </button>
+        )}
         <button className="btn lime" onClick={() => setRenewing(true)}>
           <Icon name="refresh" size={16} /> Renew
         </button>
