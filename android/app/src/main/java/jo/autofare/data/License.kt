@@ -205,6 +205,8 @@ object License {
         "used" -> "هاد الرمز انستعمل قبل"
         "other_phone" -> "هاد الرمز مربوط بجهاز ثاني"
         "rate_limited" -> "جرّبت كثير. استنّى ساعة وجرّب كمان مرة"
+        // this phone's own code, typed again, on a phone whose time has run out
+        "expired" -> "خلص وقت هاد الجهاز. تواصل معنا ليرجع يشتغل"
         else -> "ما قدرنا نفعّل الرمز"
     }
 

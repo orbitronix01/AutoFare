@@ -133,7 +133,12 @@ function DeviceDetail({ d, codes, isOwner, onClose, onChanged }) {
   const [removing, setRemoving] = useState(false);
   const [error, setError] = useState(null);
   const [code, setCode] = useState(null);
-  const latest = [...codes].sort((a, b) => (b.redeemed_at ?? b.created_at).localeCompare(a.redeemed_at ?? a.created_at));
+  // one code per phone: the one it entered. Old renewal codes made for it and
+  // never typed are not its code, and showing them as "waiting" confused things
+  const latest = codes
+    .filter((c) => c.redeemed_device === d.device_id)
+    .sort((a, b) => b.redeemed_at.localeCompare(a.redeemed_at))
+    .slice(0, 1);
 
   // the page reloads only once the modal closes, so the new code stays on screen
   if (renewing)
@@ -144,7 +149,7 @@ function DeviceDetail({ d, codes, isOwner, onClose, onChanged }) {
     return (
       <Confirm
         title={`Remove access for phone ${shortId(d.device_id)}?`}
-        body="AutoFare on this phone stops accepting rides at its next check-in: within 5 minutes when it is online, or as soon as the driver opens the app. A phone with no internet stops within 15 minutes. To give access back, use Renew; the new code's months start from today."
+        body="AutoFare on this phone stops accepting rides at its next check-in: within 5 minutes when it is online, or as soon as the driver opens the app. A phone with no internet stops within 15 minutes. To give access back, use Add time; the phone keeps its code and the time starts from today."
         yes="Remove access"
         danger
         onClose={onClose}
@@ -167,8 +172,8 @@ function DeviceDetail({ d, codes, isOwner, onClose, onChanged }) {
         <div><span>App version</span><b>{d.app_version ?? "—"}</b></div>
       </div>
       <h3 style={{ fontSize: 15, margin: "18px 0 6px" }}>Driver's code</h3>
-      {codes.length === 0 ? (
-        <p className="muted">No code on file. Renew to send them one.</p>
+      {latest.length === 0 ? (
+        <p className="muted">No code entered on this phone. Use Add time to set its time.</p>
       ) : (
         <div className="rows">
           {latest.map((c) => (
@@ -192,7 +197,7 @@ function DeviceDetail({ d, codes, isOwner, onClose, onChanged }) {
           </button>
         )}
         <button className="btn lime" onClick={() => setRenewing(true)}>
-          <Icon name="refresh" size={16} /> Renew
+          <Icon name="refresh" size={16} /> Add time
         </button>
       </div>
     </Modal>

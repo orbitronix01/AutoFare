@@ -211,7 +211,7 @@ export function CodeDetail({ c, maker, isOwner, onClose, onChanged }) {
         )}
         {c.redeemed_device && (
           <button className="btn lime" onClick={() => setRenewing(true)}>
-            <Icon name="refresh" size={16} /> Renew this driver
+            <Icon name="refresh" size={16} /> Add time
           </button>
         )}
       </div>
@@ -223,11 +223,72 @@ const whatsapp = (c) =>
   `رمز اشتراك AutoFare (${c.lifetime ? "مدى الحياة" : `${c.months} ${c.months === 1 ? "شهر" : "أشهر"}`}):\n${prettyCode(c.code)}\n\nافتح التطبيق واكتب الرمز.`;
 
 /**
- * A renewal: one code that only this phone can enter. The driver's older code
- * is deleted (a driver holds one code at a time); the phone keeps its time.
+ * Change a phone's time. One code per phone: the driver typed it once, and
+ * from then on the time is set here. The phone picks the change up at its next
+ * check-in — the driver types nothing.
  */
-export function RenewModal({ phone, customer, isOwner, onClose }) {
-  return <NewCodesModal phone={phone} customer={customer ?? ""} isOwner={isOwner} onMade={() => {}} onClose={onClose} />;
+export function RenewModal({ phone, isOwner, onClose }) {
+  const [choice, setChoice] = useState("1");
+  const [until, setUntil] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+  const [done, setDone] = useState(null);
+
+  async function submit(e) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    const args = { p_device_id: phone };
+    if (choice === "forever") args.p_forever = true;
+    else if (choice === "date") {
+      if (!until) { setError("Pick an end date."); setBusy(false); return; }
+      args.p_until = new Date(`${until}T23:59:00`).toISOString();
+    } else args.p_months = Number(choice);
+    const { data, error } = await supabase.rpc("set_access", args);
+    setBusy(false);
+    if (error) return setError(error.message);
+    setDone(data);
+  }
+
+  if (done)
+    return (
+      <Modal title="Time updated" subtitle={`Phone ${phone.slice(0, 8).toUpperCase()} now runs until ${fmtDate(done)}. The driver doesn't need to do anything: the app picks it up within 5 minutes, or as soon as they open it.`} onClose={onClose}>
+        <div className="modal-foot">
+          <button className="btn lime" onClick={onClose}>Done</button>
+        </div>
+      </Modal>
+    );
+
+  return (
+    <Modal title="Add time" subtitle={`Phone ${phone.slice(0, 8).toUpperCase()} keeps its code. Months are added to whatever time it has left.`} onClose={onClose}>
+      <form onSubmit={submit}>
+        <div className="fields">
+          <label className="field full">
+            How long
+            <select value={choice} onChange={(e) => setChoice(e.target.value)}>
+              {[1, 2, 3, 6, 12].map((m) => (
+                <option key={m} value={m}>Add {m} {m === 1 ? "month" : "months"}{isOwner ? ` — ${priceOf(m)}` : ""}</option>
+              ))}
+              <option value="date">Run until a date…</option>
+              {/* the database refuses forever from anyone but the owner */}
+              {isOwner && <option value="forever">Forever — free, for your team's own phones</option>}
+            </select>
+          </label>
+          {choice === "date" && (
+            <label className="field full">
+              Runs until the end of
+              <input type="date" value={until} onChange={(e) => setUntil(e.target.value)} autoFocus />
+            </label>
+          )}
+        </div>
+        {error && <p className="error">{error}</p>}
+        <div className="modal-foot">
+          <button type="button" className="btn ghost" onClick={onClose}>Cancel</button>
+          <button className="btn lime" disabled={busy}>{busy ? "Saving…" : "Save"}</button>
+        </div>
+      </form>
+    </Modal>
+  );
 }
 
 /** Make codes. Lives here, opened from anywhere: the rail, the board, the overview. */
