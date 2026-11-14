@@ -64,6 +64,25 @@ class RideWatchTest {
     }
 
     @Test
+    fun `petra back to searching long after the accept is kept, not cancelled`() {
+        // a "started" screen missed in between must not erase a ride he drove
+        watch.follow(RideWatch.PETRA, at = 1, fare = 3.1, etaMin = 2)
+        clock += 30 * 60_000
+        assertEquals(Verdict.STARTED, watch.onScreen(petraHome))
+    }
+
+    @Test
+    fun `jeeny not-available is not read as available`() {
+        val offline = CaptureTree.of(
+            RideWatch.JEENY,
+            "android.widget.TextView text=\"أنت غير متاح الآن\" desc=\"home_lbl_status\" bounds=148,2105,767,2191",
+        )
+        watch.follow(RideWatch.JEENY, at = 1, fare = 6.63, etaMin = 1)
+        clock += 30_000
+        assertEquals(Verdict.NONE, watch.onScreen(offline))
+    }
+
+    @Test
     fun `another app's screen is ignored`() {
         watch.follow(RideWatch.PETRA, at = 1, fare = 3.1, etaMin = 1)
         assertEquals(Verdict.NONE, watch.onScreen(jeenyHome))

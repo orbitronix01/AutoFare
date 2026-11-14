@@ -264,7 +264,8 @@ class History private constructor(context: Context) {
             """
             SELECT $COL_REASON, COUNT(*) AS n
             FROM $TABLE
-            WHERE $COL_ACCEPTED = 0 AND $COL_REASON IS NOT NULL AND $COL_AT >= ?
+            WHERE $COL_ACCEPTED = 0 AND $COL_REASON IS NOT NULL
+              AND $COL_REASON != '${Reason.CANCELLED.name}' AND $COL_AT >= ?
             GROUP BY $COL_REASON
             ORDER BY n DESC
             """.trimIndent(),

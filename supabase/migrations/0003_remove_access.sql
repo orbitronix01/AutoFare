@@ -27,12 +27,21 @@ language plpgsql
 security definer
 set search_path = public
 as $$
+declare
+    -- the code behind the phone's current time: its newest redemption
+    latest public.codes%rowtype;
 begin
     if not public.is_admin() then raise exception 'not allowed'; end if;
 
-    if not public.is_owner() and not exists (
-        select 1 from public.codes
-         where redeemed_device = p_device_id and created_by = auth.uid()
+    select * into latest from public.codes
+     where redeemed_device = p_device_id
+     order by redeemed_at desc nulls last
+     limit 1;
+
+    -- a reseller may stop only a phone whose current time they sold; once the
+    -- driver has renewed with someone else, it is no longer theirs to stop
+    if not public.is_owner() and (
+        latest.id is null or latest.created_by is distinct from auth.uid() or latest.deleted
     ) then
         raise exception 'not allowed';
     end if;
@@ -40,8 +49,9 @@ begin
     update public.devices set expires_at = now() where device_id = p_device_id;
     if not found then raise exception 'no such phone'; end if;
 
-    insert into public.device_events (device_id, event, by_admin)
-    values (p_device_id, 'removed', auth.uid());
+    -- tied to that code so the reseller who sold it sees the event too
+    insert into public.device_events (device_id, code_id, event, by_admin)
+    values (p_device_id, latest.id, 'removed', auth.uid());
 end;
 $$;
 

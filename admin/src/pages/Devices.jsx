@@ -144,7 +144,7 @@ function DeviceDetail({ d, codes, isOwner, onClose, onChanged }) {
     return (
       <Confirm
         title={`Remove access for phone ${shortId(d.device_id)}?`}
-        body="AutoFare on this phone stops accepting rides within 5 minutes, or as soon as the driver opens the app. To give access back, use Renew; the new code's months start from today."
+        body="AutoFare on this phone stops accepting rides at its next check-in: within 5 minutes when it is online, or as soon as the driver opens the app. A phone with no internet stops within 15 minutes. To give access back, use Renew; the new code's months start from today."
         yes="Remove access"
         danger
         onClose={onClose}

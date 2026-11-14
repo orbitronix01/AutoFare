@@ -22,8 +22,8 @@ import jo.autofare.detect.Screen
  *    `قيد البحث عن الطلبات` (searching for orders).
  *  - **Jeeny**'s screens after an accept have not been captured yet. Its home
  *    screen says `أنت متاح الآن` under `home_lbl_status`. Until the trip screens
- *    are known, being available again soon after the accept — sooner than a
- *    pickup plus a short ride could take — is what counts as a cancel.
+ *    are known, being available again within the pickup ETA plus a minute is
+ *    what counts as a cancel.
  */
 class RideWatch(private val now: () -> Long) {
 
@@ -55,26 +55,36 @@ class RideWatch(private val now: () -> Long) {
         if (age > FOLLOW_MS) return end(Verdict.EXPIRED)
 
         return when (r.pkg) {
-            PETRA -> petra(screen)
+            PETRA -> petra(screen, r, age)
             JEENY -> jeeny(screen, r, age)
             else -> end(Verdict.EXPIRED)
         }
     }
 
-    private fun petra(screen: Screen): Verdict {
-        val flow = screen.byId(PETRA_FLOW).firstOrNull()?.text
-        if (flow != null && !Arabic.has(flow, PETRA_ARRIVED)) {
+    private fun petra(screen: Screen, r: Ride, age: Long): Verdict {
+        val flow = screen.byId(PETRA_FLOW).firstOrNull()?.text?.trim()
+        // exactly "arrived" means still heading to the passenger; any other label is the trip moving on
+        if (!flow.isNullOrEmpty() && flow != PETRA_ARRIVED) {
             started = true
             return end(Verdict.STARTED)
         }
-        if (screen.byText(PETRA_SEARCHING).isNotEmpty()) return end(Verdict.CANCELLED)
+        if (screen.byText(PETRA_SEARCHING).isNotEmpty()) {
+            /*
+             * Back to searching without ever being seen to start. Within the
+             * window that is a cancel. Past it, a missed "started" screen is the
+             * likelier story, and wrongly erasing a ride he drove is worse than
+             * wrongly keeping one he cancelled.
+             */
+            val window = ((r.etaMin ?: 0) * 60_000L) + PETRA_GRACE_MS
+            return end(if (age <= window) Verdict.CANCELLED else Verdict.STARTED)
+        }
         return Verdict.NONE
     }
 
     private fun jeeny(screen: Screen, r: Ride, age: Long): Verdict {
         // Compose: the platform text search sees nothing, so walk
         val available = screen.walk().take(400).any {
-            it.desc == JEENY_STATUS && Arabic.has(it.text, JEENY_AVAILABLE)
+            it.desc == JEENY_STATUS && Arabic.has(it.text, JEENY_AVAILABLE) && !Arabic.has(it.text, JEENY_NOT)
         }
         if (!available) return Verdict.NONE
         val window = ((r.etaMin ?: 0) * 60_000L) + JEENY_GRACE_MS
@@ -96,9 +106,18 @@ class RideWatch(private val now: () -> Long) {
 
         private const val JEENY_STATUS = "home_lbl_status"
         private const val JEENY_AVAILABLE = "متاح"
+        /** `غير متاح` — not available — contains the word for available. */
+        private const val JEENY_NOT = "غير"
 
-        /** Pickup ETA plus this, and Jeeny being free again means the ride never happened. */
-        private const val JEENY_GRACE_MS = 3 * 60_000L
+        /**
+         * Pickup ETA plus this, and Jeeny being free again means the ride never
+         * happened. Kept short: a quick pickup and a short hop must not read as a
+         * cancel, so a slow cancel is sometimes missed instead.
+         */
+        private const val JEENY_GRACE_MS = 60_000L
+
+        /** Petra sees its own trip screens, so it can afford a longer window for a cancel at pickup. */
+        private const val PETRA_GRACE_MS = 15 * 60_000L
 
         /** Long enough for any pickup; after this the ride is assumed to have happened. */
         private const val FOLLOW_MS = 45 * 60_000L

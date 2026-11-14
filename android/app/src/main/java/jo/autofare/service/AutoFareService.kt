@@ -690,7 +690,9 @@ class AutoFareService : AccessibilityService() {
         val ride = rideWatch.ride ?: return
         if (event.packageName?.toString() != ride.pkg) return
         val now = SystemClock.elapsedRealtime()
-        if (now - lastWatchAt < WATCH_EVERY_MS) return
+        // Petra is two id lookups, so every event is affordable and no in-between
+        // "trip started" screen is skipped; Jeeny walks its tree, so it is paced
+        if (ride.pkg != RideWatch.PETRA && now - lastWatchAt < WATCH_EVERY_MS) return
         lastWatchAt = now
 
         val root = runCatching {
@@ -704,8 +706,11 @@ class AutoFareService : AccessibilityService() {
 
         if (verdict == RideWatch.Verdict.CANCELLED) {
             history.markCancelled(ride.pkg, ride.at)
-            acceptedToday = (acceptedToday - 1).coerceAtLeast(0)
-            earningsToday = (earningsToday - (ride.fare ?: 0.0)).coerceAtLeast(0.0)
+            // a ride from before midnight is not in today's tally to take out
+            if (ride.at >= History.startOfToday()) {
+                acceptedToday = (acceptedToday - 1).coerceAtLeast(0)
+                earningsToday = (earningsToday - (ride.fare ?: 0.0)).coerceAtLeast(0.0)
+            }
             showStatus()
         }
     }

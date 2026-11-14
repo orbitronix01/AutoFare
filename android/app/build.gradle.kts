@@ -40,6 +40,7 @@ android {
         // ride apps put on screen, to logcat. The recording runs after the
         // accept path, never in front of it.
         val capture = (project.findProperty("capture") as String?) == "true"
+        require(!(observe && capture)) { "-Pobserve and -Pcapture are separate builds; pick one" }
         buildConfigField("boolean", "CAPTURE", capture.toString())
         if (capture) versionNameSuffix = "-capture"
     }
