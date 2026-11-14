@@ -122,7 +122,14 @@ class AutoFareService : AccessibilityService() {
             showStatus()
             // also the fallback for an overlay grant the op watcher did not report
             refreshBubble()
-            License.checkAsync(this@AutoFareService)
+            if (OBSERVE) {
+                diagState("tick")
+                License.checkAsync(this@AutoFareService) { r ->
+                    android.util.Log.i(DIAG, "licence check answered $r")
+                }
+            } else {
+                License.checkAsync(this@AutoFareService)
+            }
             timer.postDelayed(this, License.CHECK_MS)
         }
     }
@@ -195,10 +202,14 @@ class AutoFareService : AccessibilityService() {
                 val at = System.currentTimeMillis()
                 // in-memory, for "what did it just do"; on disk, for the stats screens
                 DecisionLog.add(outcome, at)
-                history.record(outcome, at)
+                // an observe build pressed nothing, so it must not write rows that
+                // the stats screens would count as refused offers
+                if (!OBSERVE) history.record(outcome, at)
                 onDecision(outcome, at)
             },
             paid = { SystemClock.elapsedRealtime() < paidUntil },
+            dryRun = OBSERVE,
+            trace = if (OBSERVE) ::trace else null,
         )
         loadRules()
         loadLicense()
@@ -232,9 +243,80 @@ class AutoFareService : AccessibilityService() {
 
         running = true
         epoch = prefs.captureEpoch
-        learningWasOn = captureAllowed && prefs.learningEnabled
+        learningWasOn = learningOn()
         if (learningWasOn) notifier.show(store.count(), store.keepCount())
         android.util.Log.i(TAG, "connected · armed=$armed learning=$learningWasOn")
+        if (OBSERVE) diagState("connected", withHistory = true)
+    }
+
+    /** Capture runs in debug when the tester switched it on, and always in an observe build. */
+    private fun learningOn(): Boolean = captureAllowed && (OBSERVE || CAPTURE || prefs.learningEnabled)
+
+    /* ───────────────── observe build only: say everything ───────────────── */
+
+    private var lastTrace = ""
+
+    /** One line per *change* of reason, so a flood of identical events is one line. */
+    private fun trace(msg: String) {
+        if (msg == lastTrace) return
+        lastTrace = msg
+        android.util.Log.i(DIAG, msg)
+    }
+
+    /** Everything that decides whether an offer arriving now would be pressed. */
+    private fun diagState(why: String, withHistory: Boolean = false) {
+        runCatching {
+            val now = SystemClock.elapsedRealtime()
+            android.util.Log.i(
+                DIAG,
+                "state($why) v=${jo.autofare.BuildConfig.VERSION_NAME} " +
+                    "device=${Build.MANUFACTURER} ${Build.MODEL} api=${Build.VERSION.SDK_INT} " +
+                    "armed=$armed licence=${License.state(licenseStore)} " +
+                    "paidForMs=${paidUntil - now} lastOkAgoMs=${now - licenseStore.lastOkElapsed} " +
+                    "reason=${licenseStore.reason} uptimeMs=$now",
+            )
+            for ((pkg, r) in rules) android.util.Log.i(DIAG, "rules $pkg $r")
+            if (withHistory) {
+                val fmt = java.text.SimpleDateFormat("MM-dd HH:mm:ss", java.util.Locale.US)
+                val rows = history.recent(300)
+                android.util.Log.i(DIAG, "history rows=${rows.size}")
+                for (h in rows) {
+                    android.util.Log.i(
+                        DIAG,
+                        "history ${fmt.format(Date(h.at))} ${h.pkg} fare=${h.fare} eta=${h.etaMin} " +
+                            "perMin=${h.perMinute} accepted=${h.accepted} reason=${h.reason} " +
+                            "from=${h.pickup} to=${h.dropoff}",
+                    )
+                }
+            }
+        }.onFailure { android.util.Log.w(DIAG, "state dump failed", it) }
+    }
+
+    /** Which windows exist right now, top to bottom as the platform lists them. */
+    private fun windowsSummary(): String = runCatching {
+        windows.joinToString(" | ") { w ->
+            "${w.root?.packageName ?: "?"} type=${w.type} layer=${w.layer} " +
+                "active=${w.isActive} focused=${w.isFocused}"
+        }
+    }.getOrDefault("unavailable")
+
+    private var lastWindows = ""
+
+    private fun traceWindows(event: AccessibilityEvent) {
+        val structural = event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ||
+            event.eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED
+        if (!structural) return
+        val s = windowsSummary()
+        if (s == lastWindows) return
+        lastWindows = s
+        android.util.Log.i(DIAG, "windows after ${event.packageName} class=${event.className}: $s")
+    }
+
+    /** A capture, written to logcat as well: a release build's files cannot be pulled over adb. */
+    private fun dumpToLog(body: String) {
+        android.util.Log.i(DUMP, "BEGIN")
+        body.lineSequence().forEach { if (it.isNotEmpty()) android.util.Log.i(DUMP, it) }
+        android.util.Log.i(DUMP, "END")
     }
 
     override fun onDestroy() {
@@ -429,9 +511,10 @@ class AutoFareService : AccessibilityService() {
          * exists to serve learning mode and must never sit in front of it.
          */
         tryAccept(event)
+        if (OBSERVE) traceWindows(event)
 
         // always false in release, so nothing below ever runs on a driver's phone
-        if (!captureAllowed || !prefs.learningEnabled) {
+        if (!learningOn()) {
             if (learningWasOn) {
                 learningWasOn = false
                 notifier.hide()
@@ -521,6 +604,7 @@ class AutoFareService : AccessibilityService() {
          */
         val keep = reason != "same-shape"
         val body = header(eventPkg, windowPkg, reason, walked) + walked.body
+        if (OBSERVE || CAPTURE) dumpToLog(body)
 
         runCatching { store.save(windowPkg, body, keep) }
             .onSuccess {
@@ -547,17 +631,37 @@ class AutoFareService : AccessibilityService() {
      * else's ride.
      */
     private fun tryAccept(event: AccessibilityEvent) {
-        if (!armed) return
-
         val pkg = event.packageName?.toString()
-        val root = offerRoot(event, pkg) ?: return
+        if (!armed) {
+            if (OBSERVE && pkg != null && pkg in DETECTORS) trace("ignored $pkg: no app is switched on")
+            return
+        }
+
+        val root = offerRoot(event, pkg)
+        if (root == null) {
+            if (OBSERVE && pkg != null && pkg in DETECTORS) {
+                trace("ignored $pkg event type=${event.eventType}: no window root · ${windowsSummary()}")
+            }
+            return
+        }
         val rootPkg = root.packageName?.toString() ?: return
         if (rootPkg !in DETECTORS) return
-        if (rules[rootPkg]?.enabled != true) return
+        if (rules[rootPkg]?.enabled != true) {
+            if (OBSERVE) trace("ignored $rootPkg: switched off in the rules")
+            return
+        }
 
         val outcome = runCatching { auto.onScreen(NodeScreen(root, rootPkg)) }
             .onFailure { android.util.Log.e(TAG, "accept path failed for $rootPkg", it) }
             .getOrNull() ?: return
+
+        if (OBSERVE) {
+            android.util.Log.i(
+                DIAG,
+                "OFFER $rootPkg ${outcome.offer} · would=${outcome.decision} · " +
+                    "target=[${outcome.target}] · ${outcome.tookMs}ms · event=${event.eventType}",
+            )
+        }
 
         /*
          * Logged after the fact, deliberately. Nothing here — the string building,
@@ -566,7 +670,8 @@ class AutoFareService : AccessibilityService() {
         android.util.Log.i(
             TAG,
             "offer $rootPkg · ${outcome.offer.fare} د.أ · ${outcome.offer.etaMin} min · " +
-                "${outcome.decision} · pressed=${outcome.pressed} · ${outcome.tookMs}ms",
+                "${outcome.decision} · pressed=${outcome.pressed} · ${outcome.tookMs}ms " +
+                "(read ${outcome.readMs} · press ${outcome.pressMs}) · event=${event.eventType}",
         )
     }
 
@@ -751,7 +856,20 @@ class AutoFareService : AccessibilityService() {
          * false for the life of the process, so the capture branch never runs and a
          * `learning_enabled` left over in prefs from a debug install does nothing.
          */
-        private val captureAllowed: Boolean = jo.autofare.BuildConfig.DEBUG
+        private val captureAllowed: Boolean =
+            jo.autofare.BuildConfig.DEBUG || jo.autofare.BuildConfig.OBSERVE_ONLY ||
+                jo.autofare.BuildConfig.CAPTURE
+
+        /** Pressing build that also writes every capture to logcat. */
+        private const val CAPTURE: Boolean = jo.autofare.BuildConfig.CAPTURE
+
+        /**
+         * The diagnostic build: judges every offer, logs everything, presses nothing.
+         * See `OBSERVE_ONLY` in the app's build file.
+         */
+        private const val OBSERVE: Boolean = jo.autofare.BuildConfig.OBSERVE_ONLY
+        private const val DIAG = "AutoFareDiag"
+        private const val DUMP = "AutoFareDump"
 
         /** Don't walk the tree more than this often on content changes. */
         private const val WALK_FLOOR_MS = 250L

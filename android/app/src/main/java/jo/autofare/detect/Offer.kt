@@ -47,7 +47,9 @@ data class Offer(
      * because the point is to recognise it across frames.
      */
     val fingerprint: String
-        get() = listOf(pkg, fare?.toString(), etaMin?.toString(), pickup, dropoff)
+        // km as well: Petra's current layout gives no destination on the fast
+        // path, and fare + ETA alone would let two nearby offers collide
+        get() = listOf(pkg, fare?.toString(), etaMin?.toString(), km?.toString(), pickup, dropoff)
             .joinToString("|") { it ?: "-" }
 
     /** True when there is enough here to judge the ride at all. */
@@ -58,5 +60,12 @@ data class Offer(
 class Detected(
     val offer: Offer,
     val accept: Node,
-    val reject: Node?,
-)
+    /**
+     * Looked up only if someone asks. Nothing on the accept path does: AutoFare
+     * never taps Reject, and on a live tree every lookup is a round trip into the
+     * ride app's process — Jeeny's is a whole-window text search.
+     */
+    private val findReject: () -> Node? = { null },
+) {
+    val reject: Node? by lazy(findReject)
+}

@@ -50,6 +50,15 @@ object PetraDetector : OfferDetector {
     private const val PICKUP_ETA = "$PKG:id/estimated_time_to_pick_up"
     private const val DROP_OFF = "$PKG:id/drop_off_location_title_label"
 
+    /*
+     * The layout Petra shipped in November 2026 (5.25.x): the pickup and the
+     * destination became a list of stop rows, each a `stop_point_item_root` with a
+     * `point_label` naming it and, on the pickup row only, a `point_subtitle`
+     * carrying the same `2.98 دقيقة • 708 متر` string the old ETA node did. The
+     * old ids are simply gone from the offer, so both layouts are read.
+     */
+    private const val STOP_SUBTITLE = "$PKG:id/point_subtitle"
+
     override fun detect(screen: Screen): Detected? {
         val accept = screen.byId(ACCEPT).firstOrNull()?.pressTarget() ?: return null
 
@@ -59,7 +68,15 @@ object PetraDetector : OfferDetector {
          * • 210 متر`. Each figure is parsed by its own unit, so the order of the two
          * and the separator between them are both free to change.
          */
-        val etaText = screen.byId(PICKUP_ETA).firstOrNull()?.text
+        /*
+         * Every lookup here is a round trip into Petra's process, so only what the
+         * decision needs is read: the button, the price, the ETA. The current
+         * layout is tried first. Only the pickup row carries a subtitle, and it
+         * comes first in the tree, so the first subtitle with minutes in it is the
+         * pickup ETA — no walk over the rows.
+         */
+        val subtitle = screen.byId(STOP_SUBTITLE).firstOrNull { Numbers.minutes(it.text ?: "") != null }?.text
+        val etaText = subtitle ?: screen.byId(PICKUP_ETA).firstOrNull()?.text
         val offer = Offer(
             pkg = pkg,
             // Absent on bonus rides, where this slot reads `مكافأة مسافات بعيدة`.
@@ -67,11 +84,12 @@ object PetraDetector : OfferDetector {
             etaMin = etaText?.let { Numbers.minutes(it) },
             etaExact = etaText?.let { Numbers.minutesExact(it) },
             km = etaText?.let { Numbers.km(it) },
-            dropoff = screen.byId(DROP_OFF).firstOrNull()?.text,
+            // the old layout's one-lookup destination; the new one has no id for it
+            dropoff = if (subtitle == null) screen.byId(DROP_OFF).firstOrNull()?.text else null,
         )
         if (!offer.usable) return null
 
-        return Detected(offer, accept, screen.byId(REJECT).firstOrNull()?.pressTarget())
+        return Detected(offer, accept) { screen.byId(REJECT).firstOrNull()?.pressTarget() }
     }
 }
 
@@ -104,8 +122,32 @@ object JeenyDetector : OfferDetector {
         "إيكونومي", "إيكو لايت", "Jeeny Comfort", "Comfort", "Economy",
     )
 
+    /*
+     * Jeeny 24.x tags every part of the offer with a fixed content description —
+     * `ride_offer_lbl_accept`, `ride_offer_lbl_fare_amount` and the rest. They are
+     * test tags rather than wording, so they survive a translation and are what is
+     * read first.
+     */
+    private const val TAG_ACCEPT_LABEL = "ride_offer_lbl_accept"
+    private const val TAG_ACCEPT_BUTTON = "ride_offer_btn_accept"
+    private const val TAG_FARE = "ride_offer_lbl_fare_amount"
+    private const val TAG_ETA = "ride_offer_lbl_eta"
+    private const val TAG_DISTANCE = "ride_offer_lbl_distance"
+    private const val TAG_PICKUP = "ride_offer_lbl_pickup"
+    private const val TAG_DROPOFF = "ride_offer_lbl_dropoff"
+    private const val TAG_SERVICE = "ride_offer_lbl_service_name"
+
     override fun detect(screen: Screen): Detected? {
-        val hits = screen.byText(ACCEPT_WORD)
+        /*
+         * One walk, not a platform text search. Jeeny is Jetpack Compose, and on a
+         * real phone `findAccessibilityNodeInfosByText` finds nothing in it — which
+         * is why the simulator (plain TextViews) accepted and the real app never
+         * did. The walk reads the same nodes the capture shows.
+         */
+        val nodes = screen.walk().take(MAX_WALK).toList()
+        tagged(nodes)?.let { return it }
+
+        val hits = nodes.filter { Arabic.has(it.label, ACCEPT_WORD) }
         if (hits.isEmpty()) return null
 
         // `قبول العرض` is the offer sheet's button; a bare `قبول` elsewhere is not.
@@ -188,9 +230,38 @@ object JeenyDetector : OfferDetector {
         )
         if (!offer.usable) return null
 
-        val reject = screen.byText(REJECT_DESC).firstOrNull()?.pressTarget()
-        return Detected(offer, accept, reject)
+        return Detected(offer, accept) {
+            nodes.firstOrNull { Arabic.has(it.label, REJECT_DESC) }?.pressTarget()
+        }
     }
+
+    /** The 24.x offer, read by its tags. Null when this screen does not carry them. */
+    private fun tagged(nodes: List<Node>): Detected? {
+        val byTag = HashMap<String, Node>()
+        for (n in nodes) {
+            val d = n.desc ?: continue
+            if (d.startsWith("ride_offer_")) byTag.putIfAbsent(d, n)
+        }
+        val accept = (byTag[TAG_ACCEPT_LABEL] ?: byTag[TAG_ACCEPT_BUTTON])?.pressTarget() ?: return null
+
+        val fareText = byTag[TAG_FARE]?.text
+        val etaText = byTag[TAG_ETA]?.text
+        val distText = byTag[TAG_DISTANCE]?.text
+        val offer = Offer(
+            pkg = pkg,
+            fare = fareText?.let { Numbers.moneyStrict(it) },
+            etaMin = etaText?.let { Numbers.minutes(it) },
+            etaExact = etaText?.let { Numbers.minutesExact(it) },
+            km = distText?.let { Numbers.km(it) },
+            pickup = byTag[TAG_PICKUP]?.text,
+            dropoff = byTag[TAG_DROPOFF]?.text,
+            carClass = byTag[TAG_SERVICE]?.text,
+        )
+        if (!offer.usable) return null
+        return Detected(offer, accept) { byTag["ride_offer_btn_reject"]?.pressTarget() }
+    }
+
+    private const val MAX_WALK = 400
 
     private val SURGE = Regex("""\d+(\.\d+)?\s*x""", RegexOption.IGNORE_CASE)
 

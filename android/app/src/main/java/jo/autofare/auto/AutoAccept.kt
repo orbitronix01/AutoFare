@@ -55,6 +55,16 @@ class AutoAccept(
      * that will notice.
      */
     private val paid: () -> Boolean,
+    /**
+     * Observe only: detect and judge exactly as usual, but never press.
+     *
+     * For diagnosing a real phone on a real shift without taking rides. The
+     * click is the only thing skipped, so what the log says would have happened
+     * is what the ordinary build does.
+     */
+    private val dryRun: Boolean = false,
+    /** Why a screen produced no outcome. Only ever wired up in an observe build. */
+    private val trace: ((String) -> Unit)? = null,
 ) {
 
     /** What happened on one offer. */
@@ -65,6 +75,13 @@ class AutoAccept(
         val pressed: Boolean,
         /** Milliseconds from entering [onScreen] to the press returning. */
         val tookMs: Long,
+        /** True when this came from an observe build: nothing was pressed on purpose. */
+        val dry: Boolean = false,
+        /** The node that would have been pressed, described. Observe builds only. */
+        val target: String? = null,
+        /** Of [tookMs]: reading the screen, and the press itself (0 when nothing was pressed). */
+        val readMs: Long = 0,
+        val pressMs: Long = 0,
     )
 
     private val seen = HashMap<String, Long>()
@@ -90,12 +107,19 @@ class AutoAccept(
         val detector = DETECTORS[screen.pkg] ?: return null
 
         val started = now()
-        val found = detector.detect(screen) ?: return null
+        val found = detector.detect(screen)
+        if (found == null) {
+            trace?.invoke("detector found no offer in ${screen.pkg}")
+            return null
+        }
         val offer = found.offer
 
         val fp = offer.fingerprint
         val at = now()
-        if (seen[fp]?.let { at - it < REMEMBER_MS } == true) return null
+        if (seen[fp]?.let { at - it < REMEMBER_MS } == true) {
+            trace?.invoke("offer already judged: $fp")
+            return null
+        }
 
         /*
          * A driver can be on one ride at a time. Accepting, then accepting again
@@ -117,10 +141,25 @@ class AutoAccept(
             if (!paid()) Decision.Skip(Reason.UNPAID)
             else decide(offer, rulesFor(screen.pkg))
 
+        val decided = now()
         var pressed = false
-        if (decision is Decision.Accept) {
+        if (decision is Decision.Accept && !dryRun) {
             pressed = found.accept.click()
             if (pressed) lastAcceptAt = now()
+        }
+        val pressMs = if (decision is Decision.Accept && !dryRun) now() - decided else 0L
+
+        if (dryRun) {
+            // an unpaid phone hides what the rules think, and that is half the diagnosis
+            if (decision == Decision.Skip(Reason.UNPAID)) {
+                trace?.invoke("unpaid; the rules alone would say ${decide(offer, rulesFor(screen.pkg))}")
+            }
+            val t = found.accept
+            val target = "${t.className} id=${t.viewId} text=${t.text} desc=${t.desc} " +
+                "clickable=${t.clickable} enabled=${t.enabled}"
+            val outcome = Outcome(offer, decision, false, now() - started, dry = true, target = target)
+            log(outcome)
+            return outcome
         }
 
         /*
@@ -131,7 +170,10 @@ class AutoAccept(
         val reported =
             if (decision is Decision.Accept && !pressed) Decision.Skip(Reason.OFF) else decision
 
-        val outcome = Outcome(offer, reported, pressed, now() - started)
+        val outcome = Outcome(
+            offer, reported, pressed, now() - started,
+            readMs = decided - started, pressMs = pressMs,
+        )
         log(outcome)
         return outcome
     }

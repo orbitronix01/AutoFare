@@ -27,6 +27,21 @@ android {
         targetSdk = 35
         versionCode = 5
         versionName = "0.5"
+
+        // `gradle assembleRelease -Pobserve=true` builds the diagnostic APK: it
+        // reads and judges every offer, logs all of it, and can never press
+        // Accept. Signed like any release, so it installs over a driver's copy
+        // and keeps his rules, history and subscription.
+        val observe = (project.findProperty("observe") as String?) == "true"
+        buildConfigField("boolean", "OBSERVE_ONLY", observe.toString())
+        if (observe) versionNameSuffix = "-observe"
+
+        // `-Pcapture=true`: an ordinary pressing build that also records what the
+        // ride apps put on screen, to logcat. The recording runs after the
+        // accept path, never in front of it.
+        val capture = (project.findProperty("capture") as String?) == "true"
+        buildConfigField("boolean", "CAPTURE", capture.toString())
+        if (capture) versionNameSuffix = "-capture"
     }
 
     signingConfigs {

@@ -1,0 +1,30 @@
+                    android.view.ViewGroup id=me.com.easytaxista:id/container desc="home_screen_root" bounds=0,0,904,2316
+                              android.view.View desc="ride_offer_modal_sheet" bounds=0,1329,904,2316
+                                android.view.View CLICKABLE bounds=0,1329,904,2316
+                                  android.view.View desc="ride_offer_screen_root" bounds=0,1329,904,2316
+                                  android.view.View desc="ride_offer_container_header" bounds=0,1329,904,1655
+                                    android.view.View desc="ride_offer_section_service" bounds=184,1382,904,1461
+                                      android.view.View desc="ride_offer_chip_service" bounds=656,1382,851,1461
+                                        android.widget.TextView text="إيكونومي" desc="ride_offer_lbl_service_name" bounds=656,1382,851,1461
+                                    android.widget.TextView text="يبعُد 3 دقائق" desc="ride_offer_lbl_eta" bounds=184,1461,904,1580
+                                    android.widget.TextView text="يبعُد ١٫٣كم" desc="ride_offer_lbl_distance" bounds=184,1580,904,1655
+                                    android.view.View desc="ride_offer_btn_reject" CLICKABLE bounds=53,1382,184,1513
+                                  android.view.View desc="ride_offer_section_upsells" bounds=0,1655,904,1887
+                                    android.widget.TextView text="‎JOD 3.67" desc="ride_offer_lbl_fare_amount" bounds=53,1732,851,1810
+                                  android.view.View desc="ride_offer_section_locations" bounds=0,1887,904,2109
+                                    android.view.View desc="ride_offer_icon_pickup" bounds=778,1930,851,1993
+                                    android.widget.TextView text="Wadi Al-Seer - Abdallah Ghosheh Street, 105" desc="ride_offer_lbl_pickup" bounds=0,1929,778,1993
+                                    android.view.View desc="ride_offer_icon_route_divider" bounds=778,1993,851,2045
+                                    android.view.View desc="ride_offer_icon_dropoff" bounds=778,2046,851,2109
+                                    android.widget.TextView text="Near 415, Al Jama'a Street" desc="ride_offer_lbl_dropoff" bounds=177,2045,778,2109
+                                  android.view.View CLICKABLE bounds=53,2151,851,2277
+                                    android.view.View desc="ride_offer_btn_accept" bounds=53,2151,851,2277
+                                    android.view.View desc="ride_offer_container_accept_progress" bounds=82,2151,851,2277
+                                    android.widget.TextView text="قبول العرض" desc="ride_offer_lbl_accept" bounds=332,2178,573,2250
+                          android.widget.FrameLayout CLICKABLE bounds=0,0,904,2316
+                              android.view.View desc="خرائط Google" CLICKABLE bounds=0,0,904,2316
+                                android.view.View desc="محدّد الخريطة" CLICKABLE bounds=406,870,497,1021
+                                android.view.View desc="محدّد الخريطة" CLICKABLE bounds=333,772,550,994
+                                android.view.View desc="محدّد الخريطة" CLICKABLE bounds=333,772,550,994
+                                android.view.View desc="محدّد الخريطة" CLICKABLE bounds=334,111,572,333
+                                android.view.View desc="محدّد الخريطة" CLICKABLE bounds=334,111,572,333

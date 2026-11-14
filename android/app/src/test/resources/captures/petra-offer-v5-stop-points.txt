@@ -1,0 +1,16 @@
+                  android.widget.FrameLayout id=com.PetraRide_Captain:id/map_view CLICKABLE bounds=0,87,904,2277
+                      android.view.View desc="خرائط Google" CLICKABLE bounds=0,87,904,2277
+                        android.view.View desc="محدّد الخريطة" CLICKABLE bounds=200,698,300,846
+                        android.view.View desc="محدّد الخريطة" CLICKABLE bounds=616,224,693,360
+                  android.widget.Button id=com.PetraRide_Captain:id/reject_button text="رفض" CLICKABLE bounds=38,125,269,223
+                android.view.ViewGroup id=com.PetraRide_Captain:id/left_buttons_layout desc="سفير بترا رايد" CLICKABLE hidden bounds=0,1079,0,1079
+                                android.widget.TextView id=com.PetraRide_Captain:id/service_type_label text="إيكونومي" bounds=624,1553,739,1617
+                            android.widget.TextView id=com.PetraRide_Captain:id/estimated_trip_price text="1.50 د.أ" bounds=597,1640,840,1790
+                                  android.view.ViewGroup id=com.PetraRide_Captain:id/stop_point_item_root CLICKABLE bounds=99,1831,805,1945
+                                        android.widget.TextView id=com.PetraRide_Captain:id/point_label text="نقطة الإنطلاق" bounds=615,1850,737,1882
+                                        android.widget.TextView id=com.PetraRide_Captain:id/point_subtitle text="2.98 دقيقة • 708 متر" bounds=346,1846,603,1886
+                                      android.widget.TextView text="شارع زهير مطر, Amman, Jordan" bounds=292,1886,737,1930
+                                  android.view.ViewGroup id=com.PetraRide_Captain:id/stop_point_item_root CLICKABLE bounds=99,1945,805,2051
+                                        android.widget.TextView id=com.PetraRide_Captain:id/point_label text="نقطة الوصول" bounds=617,1960,737,1992
+                                      android.widget.TextView text="شارع ابن مجاهد, Amman, Jordan" bounds=277,1992,737,2036
+                            android.widget.Button id=com.PetraRide_Captain:id/accept_button text="قبول" CLICKABLE bounds=64,2092,840,2222
