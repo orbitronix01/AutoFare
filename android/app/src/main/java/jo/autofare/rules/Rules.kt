@@ -25,10 +25,21 @@ enum class Mode {
     PER_MINUTE,
 }
 
+/**
+ * The modes a driver can pick. [Mode.BAND] and [Mode.PER_MINUTE] were taken off
+ * the rules screen in November 2026: the per-minute figure divides the fare by
+ * the pickup ETA, which turned down nearly every city ride, and nobody used the
+ * band. They stay in [Mode] only so a stored choice still reads; see [usable].
+ */
+val SHOWN_MODES: List<Mode> = listOf(Mode.EVERYTHING, Mode.FLOOR)
+
+/** A stored mode the screen no longer offers becomes the minimum-fare rule. */
+fun Mode.usable(): Mode = if (this in SHOWN_MODES) this else Mode.FLOOR
+
 data class RuleSet(
     /** Auto-accept is armed for this app. Off means AutoFare watches and does nothing. */
     val enabled: Boolean = false,
-    val mode: Mode = Mode.PER_MINUTE,
+    val mode: Mode = Mode.FLOOR,
     /** Dinars per minute, for [Mode.PER_MINUTE]. */
     val rate: Double = 0.60,
     /** Never accept below this fare, in dinars. Applies in every mode but [Mode.EVERYTHING]. */
@@ -72,6 +83,12 @@ enum class Reason(val ar: String) {
     LOW_PER_MINUTE("الربح بالدقيقة قليل"),
     NO_PRICE("الطلب ما عليه أجرة"),
     NO_ETA("ما بيّن قديش الزبون بعيد"),
+
+    /**
+     * Never returned by [decide]. Written over an accepted ride once the ride app
+     * shows it was cancelled, so it stops counting as money made.
+     */
+    CANCELLED("الرحلة انلغت"),
 }
 
 /**

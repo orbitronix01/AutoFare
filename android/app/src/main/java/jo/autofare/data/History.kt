@@ -6,6 +6,7 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import jo.autofare.auto.AutoAccept
 import jo.autofare.rules.Decision
+import jo.autofare.rules.Reason
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import java.util.Calendar
@@ -111,6 +112,29 @@ class History private constructor(context: Context) {
                 // driver loses a row of history, not his auto-accept.
                 android.util.Log.w("AutoFare", "history insert failed", e)
             }
+        }
+    }
+
+    /**
+     * An accepted ride turned out to be cancelled: it no longer counts as taken.
+     *
+     * Rewritten in place rather than deleted, so the history still shows the
+     * offer and why it is not in the earnings. Every earnings query already reads
+     * only `accepted = 1`, so nothing else has to know.
+     */
+    fun markCancelled(pkg: String, at: Long) = writer.execute {
+        try {
+            val values = ContentValues().apply {
+                put(COL_ACCEPTED, 0)
+                put(COL_REASON, Reason.CANCELLED.name)
+            }
+            helper.writableDatabase.update(
+                TABLE, values, "$COL_PKG = ? AND $COL_AT = ? AND $COL_ACCEPTED = 1",
+                arrayOf(pkg, at.toString()),
+            )
+            _version.value += 1
+        } catch (e: Exception) {
+            android.util.Log.w("AutoFare", "cancel update failed", e)
         }
     }
 

@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import jo.autofare.rules.Mode
 import jo.autofare.rules.RuleSet
+import jo.autofare.rules.usable
 
 /**
  * The driver's accept rules: one shared set for every ride app, plus two small
@@ -62,7 +63,7 @@ class RulesStore(context: Context) {
     fun shared(): RuleSet {
         val d = RuleSet()
         return RuleSet(
-            mode = Mode.entries.getOrElse(sp.getInt(key(SHARED, MODE), d.mode.ordinal)) { d.mode },
+            mode = Mode.entries.getOrElse(sp.getInt(key(SHARED, MODE), d.mode.ordinal)) { d.mode }.usable(),
             rate = cents(sp.getFloat(key(SHARED, RATE), d.rate.toFloat())),
             floor = cents(sp.getFloat(key(SHARED, FLOOR), d.floor.toFloat())),
             ceiling = cents(sp.getFloat(key(SHARED, CEILING), d.ceiling.toFloat())),

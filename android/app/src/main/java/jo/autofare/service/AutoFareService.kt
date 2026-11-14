@@ -14,6 +14,7 @@ import android.view.accessibility.AccessibilityNodeInfo
 import android.view.accessibility.AccessibilityWindowInfo
 import jo.autofare.MainActivity
 import jo.autofare.auto.AutoAccept
+import jo.autofare.auto.RideWatch
 import jo.autofare.auto.cueFor
 import jo.autofare.auto.DecisionLog
 import jo.autofare.data.AppPrefs
@@ -474,6 +475,7 @@ class AutoFareService : AccessibilityService() {
         if (outcome.pressed) {
             acceptedToday++
             earningsToday += outcome.offer.fare ?: 0.0
+            rideWatch.follow(outcome.offer.pkg, at, outcome.offer.fare, outcome.offer.etaMin)
             showStatus()
             val offer = outcome.offer
             val tookMs = outcome.tookMs
@@ -511,6 +513,7 @@ class AutoFareService : AccessibilityService() {
          * exists to serve learning mode and must never sit in front of it.
          */
         tryAccept(event)
+        watchRide(event)
         if (OBSERVE) traceWindows(event)
 
         // always false in release, so nothing below ever runs on a driver's phone
@@ -673,6 +676,38 @@ class AutoFareService : AccessibilityService() {
                 "${outcome.decision} · pressed=${outcome.pressed} · ${outcome.tookMs}ms " +
                 "(read ${outcome.readMs} · press ${outcome.pressMs}) · event=${event.eventType}",
         )
+    }
+
+    /** Follows the last accepted ride so a cancel can come off the earnings. */
+    private val rideWatch = RideWatch(now = { SystemClock.elapsedRealtime() })
+    private var lastWatchAt = 0L
+
+    /**
+     * After the accept path, never before it, and at most once a second: is the
+     * ride AutoFare took still a ride?
+     */
+    private fun watchRide(event: AccessibilityEvent) {
+        val ride = rideWatch.ride ?: return
+        if (event.packageName?.toString() != ride.pkg) return
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastWatchAt < WATCH_EVERY_MS) return
+        lastWatchAt = now
+
+        val root = runCatching {
+            rootInActiveWindow?.takeIf { it.packageName?.toString() == ride.pkg } ?: windowRootFor(ride.pkg)
+        }.getOrNull() ?: return
+
+        val verdict = runCatching { rideWatch.onScreen(NodeScreen(root, ride.pkg)) }
+            .getOrDefault(RideWatch.Verdict.NONE)
+        if (verdict == RideWatch.Verdict.NONE) return
+        android.util.Log.i(TAG, "ride ${ride.pkg} ${ride.fare} د.أ · $verdict")
+
+        if (verdict == RideWatch.Verdict.CANCELLED) {
+            history.markCancelled(ride.pkg, ride.at)
+            acceptedToday = (acceptedToday - 1).coerceAtLeast(0)
+            earningsToday = (earningsToday - (ride.fare ?: 0.0)).coerceAtLeast(0.0)
+            showStatus()
+        }
     }
 
     /**
@@ -870,6 +905,9 @@ class AutoFareService : AccessibilityService() {
         private const val OBSERVE: Boolean = jo.autofare.BuildConfig.OBSERVE_ONLY
         private const val DIAG = "AutoFareDiag"
         private const val DUMP = "AutoFareDump"
+
+        /** How often a followed ride's screen is looked at. */
+        private const val WATCH_EVERY_MS = 1_000L
 
         /** Don't walk the tree more than this often on content changes. */
         private const val WALK_FLOOR_MS = 250L

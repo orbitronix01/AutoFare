@@ -17,6 +17,11 @@ class AppPrefs(context: Context) {
         get() = sp.getBoolean(KEY_ONBOARDED, false)
         set(v) = sp.edit().putBoolean(KEY_ONBOARDED, v).apply()
 
+    /** The one-time "add AutoFare to the home screen" prompt has been shown. */
+    var homeIconAsked: Boolean
+        get() = sp.getBoolean(KEY_HOME_ICON, false)
+        set(v) = sp.edit().putBoolean(KEY_HOME_ICON, v).apply()
+
     /** When true the app follows the phone's light/dark setting. */
     var followSystemTheme: Boolean
         get() = sp.getBoolean(KEY_FOLLOW_SYSTEM, true)
@@ -136,6 +141,7 @@ class AppPrefs(context: Context) {
 
     private companion object {
         const val KEY_ONBOARDED = "onboarded"
+        const val KEY_HOME_ICON = "home_icon_asked"
         const val KEY_FOLLOW_SYSTEM = "follow_system_theme"
         const val KEY_DARK = "dark_theme"
         const val KEY_LEARNING = "learning_enabled"

@@ -1,0 +1,71 @@
+package jo.autofare.auto
+
+import jo.autofare.auto.RideWatch.Verdict
+import jo.autofare.detect.CaptureTree
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Test
+
+/** Lines lifted from the 2026-11-14 live captures, trimmed to what the watch reads. */
+class RideWatchTest {
+
+    private var clock = 0L
+    private val watch = RideWatch(now = { clock })
+
+    private val petraTrip = CaptureTree.of(
+        RideWatch.PETRA,
+        """
+        android.widget.Button id=com.PetraRide_Captain:id/trip_flow_button text="الوصول" CLICKABLE bounds=46,2124,858,2254
+        """.trimIndent(),
+    )
+    private fun petraFlow(label: String) = CaptureTree.of(
+        RideWatch.PETRA,
+        "android.widget.Button id=com.PetraRide_Captain:id/trip_flow_button text=\"$label\" CLICKABLE bounds=46,2124,858,2254",
+    )
+    private val petraHome = CaptureTree.of(
+        RideWatch.PETRA,
+        "android.widget.TextView text=\"قيد البحث عن الطلبات\" bounds=300,2100,700,2160",
+    )
+    private val jeenyHome = CaptureTree.of(
+        RideWatch.JEENY,
+        "android.widget.TextView text=\"أنت متاح الآن\" desc=\"home_lbl_status\" bounds=148,2105,767,2191",
+    )
+
+    @Test
+    fun `petra back to searching before the trip started is a cancel`() {
+        watch.follow(RideWatch.PETRA, at = 1, fare = 3.1, etaMin = 1)
+        assertEquals(Verdict.NONE, watch.onScreen(petraTrip))
+        clock += 60_000
+        assertEquals(Verdict.CANCELLED, watch.onScreen(petraHome))
+        assertNull(watch.ride)
+    }
+
+    @Test
+    fun `petra trip that moves past arrival is kept`() {
+        watch.follow(RideWatch.PETRA, at = 1, fare = 3.1, etaMin = 1)
+        assertEquals(Verdict.NONE, watch.onScreen(petraTrip))
+        assertEquals(Verdict.STARTED, watch.onScreen(petraFlow("بدء الرحلة")))
+        // the later home screen is not looked at any more
+        assertEquals(Verdict.NONE, watch.onScreen(petraHome))
+    }
+
+    @Test
+    fun `jeeny available again within pickup time is a cancel`() {
+        watch.follow(RideWatch.JEENY, at = 1, fare = 6.63, etaMin = 1)
+        clock += 90_000
+        assertEquals(Verdict.CANCELLED, watch.onScreen(jeenyHome))
+    }
+
+    @Test
+    fun `jeeny available long after the accept is a finished ride`() {
+        watch.follow(RideWatch.JEENY, at = 1, fare = 6.63, etaMin = 2)
+        clock += 20 * 60_000
+        assertEquals(Verdict.STARTED, watch.onScreen(jeenyHome))
+    }
+
+    @Test
+    fun `another app's screen is ignored`() {
+        watch.follow(RideWatch.PETRA, at = 1, fare = 3.1, etaMin = 1)
+        assertEquals(Verdict.NONE, watch.onScreen(jeenyHome))
+    }
+}

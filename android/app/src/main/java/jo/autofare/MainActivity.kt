@@ -61,6 +61,7 @@ class MainActivity : ComponentActivity() {
 
         val prefs = AppPrefs(this)
         val licenseStore = LicenseStore(this)
+        offerHomeIcon(prefs)
 
         setContent {
             var followSystem by remember { mutableStateOf(prefs.followSystemTheme) }
@@ -125,6 +126,32 @@ class MainActivity : ComponentActivity() {
 }
 
 private enum class Stage { Splash, Locked, Onboarding, App }
+
+/**
+ * Ask once, on the first launch, to put AutoFare on the home screen.
+ *
+ * A sideloaded APK lands only in the app drawer on most phones, and a driver who
+ * cannot find the icon cannot switch AutoFare on. Android shows its own "add to
+ * home screen" card for this; the driver taps Add or dismisses it, and either way
+ * it is not asked again.
+ */
+private fun ComponentActivity.offerHomeIcon(prefs: AppPrefs) {
+    if (prefs.homeIconAsked) return
+    prefs.homeIconAsked = true
+    runCatching {
+        if (!androidx.core.content.pm.ShortcutManagerCompat.isRequestPinShortcutSupported(this)) return
+        val shortcut = androidx.core.content.pm.ShortcutInfoCompat.Builder(this, "home")
+            .setShortLabel("AutoFare")
+            .setIcon(androidx.core.graphics.drawable.IconCompat.createWithResource(this, R.mipmap.ic_launcher))
+            .setIntent(
+                android.content.Intent(this, MainActivity::class.java)
+                    .setAction(android.content.Intent.ACTION_MAIN)
+                    .addCategory(android.content.Intent.CATEGORY_LAUNCHER),
+            )
+            .build()
+        androidx.core.content.pm.ShortcutManagerCompat.requestPinShortcut(this, shortcut, null)
+    }
+}
 
 private class LicenseView(
     val state: License.State,

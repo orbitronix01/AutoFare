@@ -32,6 +32,7 @@ import jo.autofare.detect.Offer
 import jo.autofare.rules.Decision
 import jo.autofare.rules.Mode
 import jo.autofare.rules.RuleSet
+import jo.autofare.rules.SHOWN_MODES
 import jo.autofare.rules.decide
 import jo.autofare.ui.components.*
 import jo.autofare.ui.dinars
@@ -151,7 +152,7 @@ fun RulesScreen() {
             Modifier.fillMaxWidth().padding(horizontal = 20.dp).selectableGroup(),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Mode.entries.forEach { mode ->
+            SHOWN_MODES.forEach { mode ->
                 ModeOption(
                     title = modeTitle(mode),
                     example = modeExample(mode, rules),
