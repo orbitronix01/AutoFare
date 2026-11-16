@@ -209,6 +209,7 @@ class AutoFareService : AccessibilityService() {
                 onDecision(outcome, at)
             },
             paid = { SystemClock.elapsedRealtime() < paidUntil },
+            busy = { rideWatch.busy },
             dryRun = OBSERVE,
             trace = if (OBSERVE) ::trace else null,
         )
@@ -224,6 +225,14 @@ class AutoFareService : AccessibilityService() {
             loadRules()
             // a rule change makes every earlier decision irrelevant
             auto.reset()
+            /*
+             * The driver's way out if a ride's end was missed: switching AutoFare
+             * off for every app says "I'm not on a ride AutoFare should wait for".
+             */
+            if (!armed && rideWatch.busy) {
+                android.util.Log.i(TAG, "ride released: auto-accept switched off")
+                rideWatch.stop()
+            }
             showStatus()
             refreshBubble()
         }
@@ -705,7 +714,7 @@ class AutoFareService : AccessibilityService() {
      */
     private val rideTick = object : Runnable {
         override fun run() {
-            rideWatch.expireIfOld()
+            if (rideWatch.expireIfOld()) android.util.Log.i(TAG, "ride released: ${RideWatch.FOLLOW_MS / 60_000} min passed")
             if (rideWatch.ride == null) return
             checkRide()
             if (rideWatch.ride != null) timer.postDelayed(this, RIDE_TICK_MS)

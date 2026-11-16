@@ -89,6 +89,9 @@ enum class Reason(val ar: String) {
      * shows it was cancelled, so it stops counting as money made.
      */
     CANCELLED("الرحلة انلغت"),
+
+    /** Never returned by [decide]: the driver is still on a ride AutoFare took. */
+    BUSY("عندك رحلة شغّالة"),
 }
 
 /**

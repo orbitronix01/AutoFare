@@ -63,6 +63,11 @@ class AutoAccept(
      * is what the ordinary build does.
      */
     private val dryRun: Boolean = false,
+    /**
+     * True while the driver is on a ride AutoFare took, in any app. In memory,
+     * like [paid]. A driver on a Petra ride must not be handed a Jeeny one.
+     */
+    private val busy: () -> Boolean = { false },
     /** Why a screen produced no outcome. Only ever wired up in an observe build. */
     private val trace: ((String) -> Unit)? = null,
 ) {
@@ -139,6 +144,7 @@ class AutoAccept(
          */
         val decision =
             if (!paid()) Decision.Skip(Reason.UNPAID)
+            else if (busy()) Decision.Skip(Reason.BUSY)
             else decide(offer, rulesFor(screen.pkg))
 
         val decided = now()

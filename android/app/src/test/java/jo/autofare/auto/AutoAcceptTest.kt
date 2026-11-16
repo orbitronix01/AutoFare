@@ -42,12 +42,32 @@ class AutoAcceptTest {
         rules: RuleSet = greedy,
         log: MutableList<AutoAccept.Outcome> = mutableListOf(),
         paid: Boolean = true,
+        busy: () -> Boolean = { false },
     ) = AutoAccept(
         rulesFor = { rules },
         now = { clock },
         log = { log += it },
         paid = { paid },
+        busy = busy,
     )
+
+    @Test
+    fun `no second ride while on one, from either app`() {
+        // the driver's report: a Petra ride, then a Jeeny ride on top of it
+        var onRide = false
+        val auto = engine(busy = { onRide })
+
+        val petra = auto.onScreen(screen("petra-offer-basic", PetraDetector.pkg))!!
+        assertTrue(petra.pressed)
+        onRide = true
+
+        clock += 60_000   // well past the 8 s cooldown
+        val jeenyScreen = screen("jeeny-offer-v24-tagged", JeenyDetector.pkg)
+        val jeeny = auto.onScreen(jeenyScreen)!!
+        assertEquals(Decision.Skip(Reason.BUSY), jeeny.decision)
+        assertFalse(jeeny.pressed)
+        assertTrue(jeenyScreen.presses.isEmpty())
+    }
 
     @Test
     fun `an offer that passes the rules is pressed`() {

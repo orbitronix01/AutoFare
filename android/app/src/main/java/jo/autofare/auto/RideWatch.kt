@@ -4,36 +4,41 @@ import jo.autofare.detect.Arabic
 import jo.autofare.detect.Screen
 
 /**
- * Follows the one ride AutoFare last accepted, to notice when it is cancelled.
+ * Follows the one ride AutoFare last accepted, from the press until the driver
+ * is free again.
  *
- * An accepted ride is counted as money made the moment it is pressed. If the
- * driver or the passenger then cancels, that money never arrives, and the home
- * screen would be lying. This watches the ride app after a press and says
- * [Verdict.CANCELLED] when the app is back to "waiting for orders" before the
- * trip ever started.
+ * Two jobs:
+ *  - **One ride at a time.** While a ride is followed the driver is [busy], and
+ *    AutoFare accepts nothing from any app. A driver once got a Petra ride and
+ *    then a Jeeny ride on top of it; a ride is now over only when its app is back
+ *    to waiting for orders (or after [FOLLOW_MS], as a safety net).
+ *  - **Earnings.** A ride that ends before it started is [Verdict.CANCELLED] and
+ *    comes off the money made; one that ran is [Verdict.FINISHED].
  *
  * Never on the accept path: the service calls it after [AutoAccept] is done with
- * an event, throttled, and only while a ride is being followed.
+ * an event, and on a timer while a ride is followed.
  *
  * What each app shows, from live captures on 2026-11-14:
  *  - **Petra** puts the trip on screen with `trip_flow_button` reading `الوصول`
  *    (arrived) until the driver reaches the passenger. Any other label on that
  *    button means the trip moved on. Back on the home screen it reads
- *    `قيد البحث عن الطلبات` (searching for orders).
- *  - **Jeeny**'s screens after an accept have not been captured yet. Its home
- *    screen says `أنت متاح الآن` under `home_lbl_status`. Until the trip screens
- *    are known, being available again within the pickup ETA plus a minute is
- *    what counts as a cancel.
+ *    `قيد البحث عن الطلبات` (searching for orders): the driver is free.
+ *  - **Jeeny**'s trip screens have not been captured. Its home screen says
+ *    `أنت متاح الآن` under `home_lbl_status`: the driver is free. Free again
+ *    within the pickup ETA plus a minute means the ride was cancelled.
  */
 class RideWatch(private val now: () -> Long) {
 
-    enum class Verdict { NONE, STARTED, CANCELLED, EXPIRED }
+    enum class Verdict { NONE, STARTED, CANCELLED, FINISHED, EXPIRED }
 
     /** The ride being followed. [at] is the wall-clock key it was stored under. */
     data class Ride(val pkg: String, val at: Long, val fare: Double?, val etaMin: Int?, val since: Long)
 
     var ride: Ride? = null
         private set
+
+    /** True from a press until that ride's app is waiting for orders again. */
+    val busy: Boolean get() = ride != null
 
     private var started = false
 
@@ -42,10 +47,12 @@ class RideWatch(private val now: () -> Long) {
         started = false
     }
 
-    /** Stop following once the ride is old enough to have happened, app on screen or not. */
-    fun expireIfOld() {
-        val r = ride ?: return
-        if (now() - r.since > FOLLOW_MS) stop()
+    /** Give up on a ride old enough to be over, its app on screen or not. Returns true if it did. */
+    fun expireIfOld(): Boolean {
+        val r = ride ?: return false
+        if (now() - r.since <= FOLLOW_MS) return false
+        stop()
+        return true
     }
 
     fun stop() {
@@ -53,7 +60,10 @@ class RideWatch(private val now: () -> Long) {
         started = false
     }
 
-    /** Look at one screen of the ride's app. Anything but [Verdict.NONE] ends the watch. */
+    /**
+     * Look at one screen of the ride's app. [Verdict.STARTED] is reported once and
+     * the ride stays followed; CANCELLED, FINISHED and EXPIRED end it.
+     */
     fun onScreen(screen: Screen): Verdict {
         val r = ride ?: return Verdict.NONE
         if (screen.pkg != r.pkg) return Verdict.NONE
@@ -68,13 +78,8 @@ class RideWatch(private val now: () -> Long) {
     }
 
     private fun petra(screen: Screen, r: Ride, age: Long): Verdict {
-        val flow = screen.byId(PETRA_FLOW).firstOrNull()?.text?.trim()
-        // exactly "arrived" means still heading to the passenger; any other label is the trip moving on
-        if (!flow.isNullOrEmpty() && flow != PETRA_ARRIVED) {
-            started = true
-            return end(Verdict.STARTED)
-        }
         if (screen.byText(PETRA_SEARCHING).isNotEmpty()) {
+            if (started) return end(Verdict.FINISHED)
             /*
              * Back to searching without ever being seen to start. Within the
              * window that is a cancel. Past it, a missed "started" screen is the
@@ -82,7 +87,15 @@ class RideWatch(private val now: () -> Long) {
              * wrongly keeping one he cancelled.
              */
             val window = ((r.etaMin ?: 0) * 60_000L) + PETRA_GRACE_MS
-            return end(if (age <= window) Verdict.CANCELLED else Verdict.STARTED)
+            return end(if (age <= window) Verdict.CANCELLED else Verdict.FINISHED)
+        }
+        if (!started) {
+            val flow = screen.byId(PETRA_FLOW).firstOrNull()?.text?.trim()
+            // exactly "arrived" means still heading to the passenger; any other label is the trip moving on
+            if (!flow.isNullOrEmpty() && flow != PETRA_ARRIVED) {
+                started = true
+                return Verdict.STARTED
+            }
         }
         return Verdict.NONE
     }
@@ -94,11 +107,11 @@ class RideWatch(private val now: () -> Long) {
         }
         if (!available) return Verdict.NONE
         val window = ((r.etaMin ?: 0) * 60_000L) + JEENY_GRACE_MS
-        return end(if (age <= window) Verdict.CANCELLED else Verdict.STARTED)
+        return end(if (age <= window) Verdict.CANCELLED else Verdict.FINISHED)
     }
 
     private fun end(v: Verdict): Verdict {
-        ride = null
+        stop()
         return v
     }
 
@@ -125,7 +138,12 @@ class RideWatch(private val now: () -> Long) {
         /** Petra sees its own trip screens, so it can afford a longer window for a cancel at pickup. */
         private const val PETRA_GRACE_MS = 15 * 60_000L
 
-        /** Long enough for any pickup; after this the ride is assumed to have happened. */
-        private const val FOLLOW_MS = 45 * 60_000L
+        /**
+         * The safety net: after this, the driver is taken to be free even if the
+         * ride's app was never seen waiting for orders again. Long enough for an
+         * airport run; short enough that a missed end costs one quiet stretch,
+         * not a shift.
+         */
+        const val FOLLOW_MS = 90 * 60_000L
     }
 }

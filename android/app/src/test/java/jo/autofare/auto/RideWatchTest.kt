@@ -3,7 +3,9 @@ package jo.autofare.auto
 import jo.autofare.auto.RideWatch.Verdict
 import jo.autofare.detect.CaptureTree
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** Lines lifted from the 2026-11-14 live captures, trimmed to what the watch reads. */
@@ -41,12 +43,28 @@ class RideWatchTest {
     }
 
     @Test
-    fun `petra trip that moves past arrival is kept`() {
+    fun `petra trip that moves past arrival is kept, and the driver stays busy until it ends`() {
         watch.follow(RideWatch.PETRA, at = 1, fare = 3.1, etaMin = 1)
         assertEquals(Verdict.NONE, watch.onScreen(petraTrip))
         assertEquals(Verdict.STARTED, watch.onScreen(petraFlow("بدء الرحلة")))
-        // the later home screen is not looked at any more
-        assertEquals(Verdict.NONE, watch.onScreen(petraHome))
+        assertTrue("on the trip: no other ride may be taken", watch.busy)
+        assertEquals(Verdict.NONE, watch.onScreen(petraFlow("إنهاء الرحلة")))
+        assertTrue(watch.busy)
+        // back to searching after it started: finished, never a cancel
+        clock += 60_000
+        assertEquals(Verdict.FINISHED, watch.onScreen(petraHome))
+        assertFalse(watch.busy)
+    }
+
+    @Test
+    fun `the driver is released after the safety window even if the end is never seen`() {
+        watch.follow(RideWatch.JEENY, at = 1, fare = 6.63, etaMin = 2)
+        clock += RideWatch.FOLLOW_MS - 1
+        assertFalse(watch.expireIfOld())
+        assertTrue(watch.busy)
+        clock += 2
+        assertTrue(watch.expireIfOld())
+        assertFalse(watch.busy)
     }
 
     @Test
@@ -60,7 +78,7 @@ class RideWatchTest {
     fun `jeeny available long after the accept is a finished ride`() {
         watch.follow(RideWatch.JEENY, at = 1, fare = 6.63, etaMin = 2)
         clock += 20 * 60_000
-        assertEquals(Verdict.STARTED, watch.onScreen(jeenyHome))
+        assertEquals(Verdict.FINISHED, watch.onScreen(jeenyHome))
     }
 
     @Test
@@ -68,7 +86,7 @@ class RideWatchTest {
         // a "started" screen missed in between must not erase a ride he drove
         watch.follow(RideWatch.PETRA, at = 1, fare = 3.1, etaMin = 2)
         clock += 30 * 60_000
-        assertEquals(Verdict.STARTED, watch.onScreen(petraHome))
+        assertEquals(Verdict.FINISHED, watch.onScreen(petraHome))
     }
 
     @Test
