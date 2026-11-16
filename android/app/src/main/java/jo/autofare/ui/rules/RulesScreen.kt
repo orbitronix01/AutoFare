@@ -171,7 +171,9 @@ fun RulesScreen() {
             )
             Stepper("", arNum(rules.maxEtaMin), minutesUnit(rules.maxEtaMin),
                 onMinus = { update { it.copy(maxEtaMin = (it.maxEtaMin - 1).coerceAtLeast(1)) } },
-                onPlus = { update { it.copy(maxEtaMin = it.maxEtaMin + 1) } })
+                onPlus = { update { it.copy(maxEtaMin = it.maxEtaMin + 1) } },
+                onSet = { v -> update { it.copy(maxEtaMin = v.toInt().coerceIn(1, 60)) } },
+                decimals = false)
         }
 
         /* ── 04 Petra's bonus rides ── */
@@ -316,7 +318,10 @@ private fun ModeControls(mode: Mode, rules: RuleSet, update: ((RuleSet) -> RuleS
 
         Mode.FLOOR ->
             Stepper("أقل أجرة بتقبلها", money2(rules.floor), "د.أ",
-                onMinus = { floorStep(-0.25) }, onPlus = { floorStep(0.25) })
+                onMinus = { floorStep(-0.25) }, onPlus = { floorStep(0.25) },
+                // typed straight in; kept to whole fils-free cents, 0–100 د.أ
+                onSet = { v -> update { it.copy(floor = (Math.round(v * 100) / 100.0).coerceIn(0.0, 100.0)) } },
+                decimals = true)
 
         Mode.BAND -> {
             Stepper("من", money2(rules.floor), "د.أ",

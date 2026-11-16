@@ -41,6 +41,7 @@ class Feedback(context: Context) {
     }
 
     fun release() {
+        runCatching { pool?.release() }
         thread.quitSafely()
     }
 
@@ -49,21 +50,45 @@ class Feedback(context: Context) {
      * who has muted his phone in the car has already answered whether he wants
      * this, and a tone forcing its way through would be the app overruling him.
      */
+    /*
+     * The accept chime: three rising notes, 0.7 s (res/raw/accept_chime.wav).
+     * It replaced a 180 ms system beep that drivers did not notice. Played as a
+     * notification sound so it follows the ringer — the ride apps' own offer
+     * sounds already need that up — with a buzz alongside so a phone on silent
+     * still says something.
+     */
+    private val pool: android.media.SoundPool? = runCatching {
+        android.media.SoundPool.Builder()
+            .setMaxStreams(1)
+            .setAudioAttributes(
+                android.media.AudioAttributes.Builder()
+                    .setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION_EVENT)
+                    .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build(),
+            )
+            .build()
+    }.getOrNull()
+
+    private val chime: Int = pool?.let { p -> runCatching { p.load(app, jo.autofare.R.raw.accept_chime, 1) }.getOrNull() } ?: 0
+
     private fun tone() {
         runCatching {
-            val gen = ToneGenerator(AudioManager.STREAM_NOTIFICATION, TONE_VOLUME)
-            gen.startTone(ToneGenerator.TONE_PROP_ACK, TONE_MS)
-            // released on this same thread once the tone has played out; releasing
-            // straight away cuts it off on some builds
-            handler.postDelayed({ runCatching { gen.release() } }, TONE_MS + 150L)
+            val played = pool != null && chime != 0 && pool.play(chime, 1f, 1f, 1, 0, 1f) != 0
+            // the pool loads asynchronously; the very first accept after a restart may beat it
+            if (!played) {
+                val gen = ToneGenerator(AudioManager.STREAM_NOTIFICATION, TONE_VOLUME)
+                gen.startTone(ToneGenerator.TONE_PROP_ACK, TONE_MS)
+                handler.postDelayed({ runCatching { gen.release() } }, TONE_MS + 150L)
+            }
         }
+        buzz(ACCEPT_BUZZ_MS)
     }
 
-    private fun buzz() {
+    private fun buzz(ms: Long = BUZZ_MS) {
         runCatching {
             val vibrator = vibrator() ?: return
             if (!vibrator.hasVibrator()) return
-            vibrator.vibrate(VibrationEffect.createOneShot(BUZZ_MS, VibrationEffect.DEFAULT_AMPLITUDE))
+            vibrator.vibrate(VibrationEffect.createOneShot(ms, VibrationEffect.DEFAULT_AMPLITUDE))
         }
     }
 
@@ -83,5 +108,6 @@ class Feedback(context: Context) {
 
         /** "Something happened", felt through a phone mount — not an alarm. */
         const val BUZZ_MS = 70L
+        const val ACCEPT_BUZZ_MS = 250L
     }
 }

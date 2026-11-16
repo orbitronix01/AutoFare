@@ -28,6 +28,10 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -371,8 +375,22 @@ fun Stepper(
     unit: String,
     onMinus: () -> Unit,
     onPlus: () -> Unit,
+    /** When given, tapping the value lets the driver type a figure instead of stepping to it. */
+    onSet: ((Double) -> Unit)? = null,
+    /** Whether a typed figure may have decimals (money) or not (minutes). */
+    decimals: Boolean = true,
 ) {
     val af = LocalAfColors.current
+    var typing by remember { mutableStateOf(false) }
+    if (typing && onSet != null) {
+        TypeValueDialog(
+            title = label.ifEmpty { unit },
+            unit = unit,
+            start = jo.autofare.ui.latinDigits(value).replace('٫', '.'),
+            decimals = decimals,
+            onDone = { v -> typing = false; if (v != null) onSet(v) },
+        )
+    }
     Column(Modifier.fillMaxWidth().padding(top = 15.dp)) {
         if (label.isNotEmpty()) {
             Text(label, fontSize = 12.sp, color = af.muted)
@@ -385,9 +403,14 @@ fun Stepper(
         ) {
             StepKey("−", onMinus)
             Card(
-                Modifier.weight(1f).fillMaxHeight(),
+                onClick = { typing = true },
+                enabled = onSet != null,
+                modifier = Modifier.weight(1f).fillMaxHeight(),
                 shape = MaterialTheme.shapes.medium,
-                colors = CardDefaults.cardColors(containerColor = af.raised),
+                colors = CardDefaults.cardColors(
+                    containerColor = af.raised,
+                    disabledContainerColor = af.raised,
+                ),
                 border = BorderStroke(1.dp, af.ink),
             ) {
                 Row(
@@ -404,6 +427,58 @@ fun Stepper(
             StepKey("+", onPlus)
         }
     }
+}
+
+/**
+ * Type a figure. Arabic-Indic digits and the Arabic decimal mark are accepted,
+ * since that is what an Arabic keyboard types. Returns null on cancel.
+ */
+@Composable
+private fun TypeValueDialog(
+    title: String,
+    unit: String,
+    start: String,
+    decimals: Boolean,
+    onDone: (Double?) -> Unit,
+) {
+    val af = LocalAfColors.current
+    var text by remember { mutableStateOf(start) }
+    val parsed = jo.autofare.ui.latinDigits(text).replace('٫', '.').replace(',', '.').trim().toDoubleOrNull()
+        ?.takeIf { it >= 0 && (decimals || it == Math.floor(it)) }
+
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = { onDone(null) },
+        containerColor = af.raised,
+        title = { Text(title, fontWeight = FontWeight.Bold, color = af.ink) },
+        text = {
+            androidx.compose.material3.OutlinedTextField(
+                value = text,
+                onValueChange = { text = it.take(7) },
+                singleLine = true,
+                suffix = { Text(unit, color = af.muted) },
+                isError = text.isNotBlank() && parsed == null,
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                    keyboardType = if (decimals) androidx.compose.ui.text.input.KeyboardType.Decimal
+                    else androidx.compose.ui.text.input.KeyboardType.Number,
+                    imeAction = androidx.compose.ui.text.input.ImeAction.Done,
+                ),
+                keyboardActions = androidx.compose.foundation.text.KeyboardActions(
+                    onDone = { if (parsed != null) onDone(parsed) },
+                ),
+                textStyle = FigureMedium.copy(fontSize = 22.sp, color = af.ink),
+            )
+        },
+        confirmButton = {
+            androidx.compose.material3.TextButton(onClick = { onDone(parsed) }, enabled = parsed != null) {
+                Text("تمام", fontWeight = FontWeight.Bold, color = af.ink)
+            }
+        },
+        dismissButton = {
+            androidx.compose.material3.TextButton(onClick = { onDone(null) }) {
+                Text("إلغاء", color = af.muted)
+            }
+        },
+    )
 }
 
 @Composable

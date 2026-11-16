@@ -51,6 +51,12 @@ private val STEPS = listOf(
         reassurance = "هاي أهم خطوة. بدونها التطبيق ما بضل شغّال.",
     ),
     Step(
+        headline = "خلّينا\nنحكيلك",
+        body = "وإنت جوّا جيني أو بترا، الإشعار هو الطريقة الوحيدة نقلّك فيها إنّا قبلنا طلب، أو إذا في إشي موقّف القبول. شغّل الإشعارات لـ AutoFare.",
+        cta = "افتح إعدادات الإشعارات",
+        reassurance = "ما منبعت إعلانات. بس شو بصير بطلباتك.",
+    ),
+    Step(
         headline = "حدّد\nقواعدك",
         body = "قلّنا شو الطلب اللي بدك إياه: الأجرة، وقديش بعيد الزبون. وإحنا منقرّر عنك بأقل من ثانية.",
         cta = "يلّا نبلّش",
@@ -75,7 +81,7 @@ fun OnboardingScreen(onDone: () -> Unit) {
     ) {
         Spacer(Modifier.height(14.dp))
 
-        // progress — three slanted bars, same motif as everything else
+        // progress — one slanted bar per step, same motif as everything else
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
             STEPS.indices.forEach { i ->
                 Canvas(Modifier.weight(1f).height(3.dp)) {
@@ -143,6 +149,8 @@ fun OnboardingScreen(onDone: () -> Unit) {
                 when (index) {
                     0 -> context.safeStart(Settings.ACTION_ACCESSIBILITY_SETTINGS)
                     1 -> context.safeStart(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                    // AutoFare's own notification page, where the one switch is
+                    2 -> jo.autofare.ui.settings.openNotificationSettings(context)
                 }
                 if (index < STEPS.lastIndex) index++ else onDone()
             },
