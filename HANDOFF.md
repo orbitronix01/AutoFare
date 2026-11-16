@@ -1,6 +1,8 @@
 # AutoFare — handoff
 
-Everything a fresh Claude session needs to pick this project up. Written 2026-11-15
+Everything a fresh Claude session needs to pick this project up. Written 2026-11-15,
+updated 2026-11-16 for v0.7 (one ride at a time, accept chime, type-in amounts,
+notifications setup step — built but not yet tried on a phone).
 at commit `9ef0010` on `main`. The app is **finished and being handed to drivers**
 (v0.6). Read this whole file before touching anything.
 
