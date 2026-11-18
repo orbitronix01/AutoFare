@@ -432,7 +432,9 @@ private fun ruleSummary(r: RuleSet, app: RideApp): String {
     val eta = "الزبون لحد ${minutes(r.maxEtaMin)}"
     return when (r.mode) {
         Mode.EVERYTHING -> "أي طلب قريب · $eta"
-        Mode.FLOOR -> "أجرة ${fig(r.floor)} ${app.currency} أو أكثر · $eta"
+        Mode.FLOOR ->
+            if (r.useCeiling) "أجرة بين ${fig(r.floor)} و${fig(r.ceiling)} ${app.currency} · $eta"
+            else "أجرة ${fig(r.floor)} ${app.currency} أو أكثر · $eta"
         Mode.BAND -> "أجرة بين ${fig(r.floor)} و${fig(r.ceiling)} ${app.currency} · $eta"
         Mode.PER_MINUTE -> "${fig(r.rate)} ${app.currency} للدقيقة أو أكثر · $eta"
     }

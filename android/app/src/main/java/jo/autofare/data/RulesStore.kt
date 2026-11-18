@@ -67,6 +67,7 @@ class RulesStore(context: Context) {
             rate = cents(sp.getFloat(key(SHARED, RATE), d.rate.toFloat())),
             floor = cents(sp.getFloat(key(SHARED, FLOOR), d.floor.toFloat())),
             ceiling = cents(sp.getFloat(key(SHARED, CEILING), d.ceiling.toFloat())),
+            useCeiling = sp.getBoolean(key(SHARED, USE_CEILING), d.useCeiling),
             maxEtaMin = sp.getInt(key(SHARED, MAX_ETA), d.maxEtaMin),
         )
     }
@@ -119,6 +120,7 @@ class RulesStore(context: Context) {
             .putFloat(key(SHARED, RATE), rules.rate.toFloat())
             .putFloat(key(SHARED, FLOOR), rules.floor.toFloat())
             .putFloat(key(SHARED, CEILING), rules.ceiling.toFloat())
+            .putBoolean(key(SHARED, USE_CEILING), rules.useCeiling)
             .putInt(key(SHARED, MAX_ETA), rules.maxEtaMin)
     }
 
@@ -166,6 +168,7 @@ class RulesStore(context: Context) {
         private const val RATE = "rate"
         private const val FLOOR = "floor"
         private const val CEILING = "ceiling"
+        private const val USE_CEILING = "use_ceiling"
         private const val MAX_ETA = "max_eta"
         private const val NO_PRICE = "accept_no_price"
     }

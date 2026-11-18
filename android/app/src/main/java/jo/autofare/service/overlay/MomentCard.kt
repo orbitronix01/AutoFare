@@ -66,8 +66,13 @@ fun momentCard(offer: Offer, rules: RuleSet?, appName: String, tookMs: Long): Mo
             }
             Mode.FLOOR -> {
                 rows += MomentCard.Row("الأجرة", jod(fare), key = true)
-                rows += MomentCard.Row("أقل أجرة بتقبلها", jod(rules.floor))
-                why = above(fare, rules.floor)
+                if (rules.useCeiling) {
+                    rows += MomentCard.Row("الحدّين اللي حطّيتهم", "${jod(rules.floor)} – ${jod(rules.ceiling)}")
+                    why = "الأجرة بين الحدّين اللي حطّيتهم."
+                } else {
+                    rows += MomentCard.Row("أقل أجرة بتقبلها", jod(rules.floor))
+                    why = above(fare, rules.floor)
+                }
             }
             Mode.BAND -> {
                 rows += MomentCard.Row("الأجرة", jod(fare), key = true)

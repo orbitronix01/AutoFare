@@ -44,8 +44,14 @@ data class RuleSet(
     val rate: Double = 0.60,
     /** Never accept below this fare, in dinars. Applies in every mode but [Mode.EVERYTHING]. */
     val floor: Double = 2.50,
-    /** Only consulted in [Mode.BAND]. */
+    /** The most AutoFare accepts. Consulted in [Mode.BAND], and in [Mode.FLOOR] when [useCeiling] is on. */
     val ceiling: Double = 12.00,
+    /**
+     * The minimum-fare rule's optional maximum (asked for by a driver, 2026-11-19).
+     * Off by default, so every rule set saved before it existed behaves exactly
+     * as it did: a minimum and no top.
+     */
+    val useCeiling: Boolean = false,
     /** Minutes to the passenger. */
     val maxEtaMin: Int = 6,
     /**
@@ -121,8 +127,11 @@ fun decide(offer: Offer, rules: RuleSet): Decision {
     return when (rules.mode) {
         Mode.EVERYTHING -> Decision.Accept
 
-        Mode.FLOOR ->
-            if (fare >= rules.floor) Decision.Accept else Decision.Skip(Reason.TOO_CHEAP)
+        Mode.FLOOR -> when {
+            fare < rules.floor -> Decision.Skip(Reason.TOO_CHEAP)
+            rules.useCeiling && fare > rules.ceiling -> Decision.Skip(Reason.TOO_EXPENSIVE)
+            else -> Decision.Accept
+        }
 
         Mode.BAND -> when {
             fare < rules.floor -> Decision.Skip(Reason.TOO_CHEAP)

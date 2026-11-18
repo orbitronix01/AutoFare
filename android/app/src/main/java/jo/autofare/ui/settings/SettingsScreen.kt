@@ -126,8 +126,12 @@ fun SettingsScreen(onOpenLearn: (() -> Unit)? = null) {
                     }
                 },
             )
-            ToggleLine("صوت لما نقبل طلب", "نغمة قصيرة، عشان تعرف إنّا قبلنا بدون ما تطلّع ع الشاشة.", sound,
-                onToggle = { sound = !sound; prefs.acceptSound = sound })
+            ToggleLine("صوت لما نقبل طلب", "نغمة قصيرة، حتى لو الجوال ع الصامت. صوتها من صوت المنبّه.", sound,
+                onToggle = {
+                    sound = !sound; prefs.acceptSound = sound
+                    // switching it on plays it once, so he hears it and can set the volume
+                    if (sound) jo.autofare.service.Feedback.preview(context)
+                })
             ToggleLine(
                 "هزّة لما نترك طلب",
                 "هزّة خفيفة لما يجي طلب ما بيطابق قواعدك، عشان تعرف إنه إجا وتركناه.",

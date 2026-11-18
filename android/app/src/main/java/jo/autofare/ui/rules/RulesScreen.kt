@@ -317,11 +317,38 @@ private fun ModeControls(mode: Mode, rules: RuleSet, update: ((RuleSet) -> RuleS
         Mode.EVERYTHING -> Unit
 
         Mode.FLOOR ->
+        {
+            // the minimum may not pass an active maximum, or nothing could ever be accepted
+            val floorCap: (RuleSet) -> Double = { if (it.useCeiling) it.ceiling else 100.0 }
             Stepper("أقل أجرة بتقبلها", money2(rules.floor), "د.أ",
-                onMinus = { floorStep(-0.25) }, onPlus = { floorStep(0.25) },
-                // typed straight in; kept to whole fils-free cents, 0–100 د.أ
-                onSet = { v -> update { it.copy(floor = (Math.round(v * 100) / 100.0).coerceIn(0.0, 100.0)) } },
+                onMinus = { floorStep(-0.25) },
+                onPlus = { update { it.copy(floor = (it.floor + 0.25).coerceAtMost(floorCap(it))) } },
+                // typed straight in; kept to whole cents, 0–100 د.أ
+                onSet = { v -> update { it.copy(floor = (Math.round(v * 100) / 100.0).coerceIn(0.0, floorCap(it))) } },
                 decimals = true)
+
+            // the optional maximum: off by default, so nothing changes until he asks for it
+            ToggleLine(
+                "وحدّ أعلى للأجرة",
+                "ما منقبل طلب أجرته أكثر من هيك. بتفيد إذا بدك تترك المشاوير الطويلة.",
+                rules.useCeiling,
+                onToggle = {
+                    update { r ->
+                        val on = !r.useCeiling
+                        // switching it on starts above the minimum, never below it
+                        r.copy(useCeiling = on, ceiling = if (on) maxOf(r.ceiling, r.floor) else r.ceiling)
+                    }
+                },
+                showRule = false,
+            )
+            if (rules.useCeiling) {
+                Stepper("أعلى أجرة بتقبلها", money2(rules.ceiling), "د.أ",
+                    onMinus = { update { it.copy(ceiling = (it.ceiling - 0.25).coerceAtLeast(it.floor)) } },
+                    onPlus = { update { it.copy(ceiling = (it.ceiling + 0.25).coerceAtMost(100.0)) } },
+                    onSet = { v -> update { it.copy(ceiling = (Math.round(v * 100) / 100.0).coerceIn(it.floor, 100.0)) } },
+                    decimals = true)
+            }
+        }
 
         Mode.BAND -> {
             Stepper("من", money2(rules.floor), "د.أ",
@@ -423,7 +450,8 @@ private fun modeExample(mode: Mode, r: RuleSet) = when (mode) {
     Mode.EVERYTHING ->
         "منقبل كل طلب مهما كانت أجرته، بس لازم الزبون يكون قريب."
     Mode.FLOOR ->
-        "منقبل إذا الأجرة ${dinars(r.floor)} أو أكثر."
+        if (r.useCeiling) "منقبل إذا الأجرة بين ${fig(r.floor)} و${dinars(r.ceiling)}."
+        else "منقبل إذا الأجرة ${dinars(r.floor)} أو أكثر."
     Mode.BAND ->
         "منقبل إذا الأجرة بين ${fig(r.floor)} و${dinars(r.ceiling)}. بتفيد إذا بدك تترك المشاوير الطويلة كمان."
     Mode.PER_MINUTE -> {
@@ -455,7 +483,9 @@ private fun summary(r: RuleSet, armed: Map<String, Boolean>, petraNoPrice: Boole
     val reach = "إذا الزبون على بعد ${minutes(r.maxEtaMin)} أو أقل"
     val fare = when (r.mode) {
         Mode.EVERYTHING -> "، مهما كانت الأجرة"
-        Mode.FLOOR -> " والأجرة ${dinars(r.floor)} أو أكثر"
+        Mode.FLOOR ->
+            if (r.useCeiling) " والأجرة بين ${fig(r.floor)} و${dinars(r.ceiling)}"
+            else " والأجرة ${dinars(r.floor)} أو أكثر"
         Mode.BAND -> " والأجرة بين ${fig(r.floor)} و${dinars(r.ceiling)}"
         Mode.PER_MINUTE ->
             " والربح ${fig(r.rate)} د.أ للدقيقة أو أكثر، بشرط الأجرة ما تقل عن ${dinars(r.floor)}"

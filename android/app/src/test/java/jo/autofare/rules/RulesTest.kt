@@ -22,6 +22,33 @@ class RulesTest {
 
     private fun reasonOf(d: Decision) = (d as Decision.Skip).reason
 
+    /* ── minimum fare with the optional maximum (2026-11-19) ── */
+
+    private val floorOnly = armed.copy(mode = Mode.FLOOR, floor = 2.00, ceiling = 5.00, maxEtaMin = 10)
+    private val floorAndMax = floorOnly.copy(useCeiling = true)
+
+    @Test
+    fun `with the maximum off, a long expensive ride is still taken exactly as before`() {
+        assertEquals(Decision.Accept, decide(offer(18.0, 3), floorOnly))
+        assertEquals(Reason.TOO_CHEAP, reasonOf(decide(offer(1.50, 3), floorOnly)))
+    }
+
+    @Test
+    fun `with the maximum on, fares above it are skipped and the band edges are taken`() {
+        assertEquals(Reason.TOO_EXPENSIVE, reasonOf(decide(offer(5.01, 3), floorAndMax)))
+        assertEquals(Reason.TOO_CHEAP, reasonOf(decide(offer(1.99, 3), floorAndMax)))
+        assertEquals(Decision.Accept, decide(offer(2.00, 3), floorAndMax))
+        assertEquals(Decision.Accept, decide(offer(5.00, 3), floorAndMax))
+        assertEquals(Decision.Accept, decide(offer(3.75, 3), floorAndMax))
+    }
+
+    @Test
+    fun `the maximum does not touch anything-close mode or the pickup limit`() {
+        val everything = floorAndMax.copy(mode = Mode.EVERYTHING)
+        assertEquals(Decision.Accept, decide(offer(18.0, 3), everything))
+        assertEquals(Reason.TOO_FAR, reasonOf(decide(offer(3.0, 11), floorAndMax)))
+    }
+
     @Test
     fun `disarmed accepts nothing at all`() {
         val perfect = offer(20.0, 1)

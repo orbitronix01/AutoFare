@@ -25,8 +25,8 @@ android {
         applicationId = "jo.autofare"
         minSdk = 26
         targetSdk = 35
-        versionCode = 7
-        versionName = "0.7"
+        versionCode = 8
+        versionName = "0.8"
 
         // `gradle assembleRelease -Pobserve=true` builds the diagnostic APK: it
         // reads and judges every offer, logs all of it, and can never press

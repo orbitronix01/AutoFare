@@ -45,27 +45,19 @@ class Feedback(context: Context) {
         thread.quitSafely()
     }
 
-    /**
-     * On the notification stream, so a phone on silent stays silent. A driver
-     * who has muted his phone in the car has already answered whether he wants
-     * this, and a tone forcing its way through would be the app overruling him.
-     */
     /*
      * The accept chime: three rising notes, 0.7 s (res/raw/accept_chime.wav).
-     * It replaced a 180 ms system beep that drivers did not notice. Played as a
-     * notification sound so it follows the ringer — the ride apps' own offer
-     * sounds already need that up — with a buzz alongside so a phone on silent
-     * still says something.
+     *
+     * Played on the ALARM channel. As a notification sound (0.7) it was silent
+     * for a driver whose phone was on vibrate — reported 2026-11-19, and common
+     * in a car — and quiet whenever notification volume was down. The alarm
+     * channel plays on vibrate and silent and follows the alarm volume. It is
+     * still the driver's choice: the Settings switch turns it off entirely.
      */
     private val pool: android.media.SoundPool? = runCatching {
         android.media.SoundPool.Builder()
             .setMaxStreams(1)
-            .setAudioAttributes(
-                android.media.AudioAttributes.Builder()
-                    .setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION_EVENT)
-                    .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                    .build(),
-            )
+            .setAudioAttributes(CHIME_ATTRS)
             .build()
     }.getOrNull()
 
@@ -76,7 +68,7 @@ class Feedback(context: Context) {
             val played = pool != null && chime != 0 && pool.play(chime, 1f, 1f, 1, 0, 1f) != 0
             // the pool loads asynchronously; the very first accept after a restart may beat it
             if (!played) {
-                val gen = ToneGenerator(AudioManager.STREAM_NOTIFICATION, TONE_VOLUME)
+                val gen = ToneGenerator(AudioManager.STREAM_ALARM, TONE_VOLUME)
                 gen.startTone(ToneGenerator.TONE_PROP_ACK, TONE_MS)
                 handler.postDelayed({ runCatching { gen.release() } }, TONE_MS + 150L)
             }
@@ -101,13 +93,35 @@ class Feedback(context: Context) {
             app.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
         }
 
-    private companion object {
+    companion object {
+        private val CHIME_ATTRS: android.media.AudioAttributes =
+            android.media.AudioAttributes.Builder()
+                .setUsage(android.media.AudioAttributes.USAGE_ALARM)
+                .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build()
+
+        /**
+         * Play the accept chime once, exactly as an accept will — for the
+         * Settings switch, so a driver hears it and can set the alarm volume
+         * before an order ever comes.
+         */
+        fun preview(context: Context) {
+            runCatching {
+                val app = context.applicationContext
+                val sid = (app.getSystemService(Context.AUDIO_SERVICE) as AudioManager).generateAudioSessionId()
+                val mp = android.media.MediaPlayer.create(app, jo.autofare.R.raw.accept_chime, CHIME_ATTRS, sid)
+                    ?: return
+                mp.setOnCompletionListener { it.release() }
+                mp.start()
+            }
+        }
+
         /** Out of 100. Loud enough over an engine, not a fanfare. */
-        const val TONE_VOLUME = 80
-        const val TONE_MS = 180
+        private const val TONE_VOLUME = 80
+        private const val TONE_MS = 180
 
         /** "Something happened", felt through a phone mount — not an alarm. */
-        const val BUZZ_MS = 70L
-        const val ACCEPT_BUZZ_MS = 250L
+        private const val BUZZ_MS = 70L
+        private const val ACCEPT_BUZZ_MS = 250L
     }
 }
